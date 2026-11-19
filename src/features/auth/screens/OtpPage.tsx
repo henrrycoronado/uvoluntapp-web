@@ -22,7 +22,7 @@ export function OtpPage() {
       const result = await authApi.verifyOtp(email, code.trim())
       if (result.tokens) {
         writeSession(result.tokens)
-        navigate('/perfil')
+        navigate('/inicio')
       } else {
         setPendingApproval(true)
       }

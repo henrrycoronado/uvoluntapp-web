@@ -19,7 +19,7 @@ export function LoginPage() {
     setSubmitting(true)
     try {
       writeSession(await authApi.login(email.trim(), password))
-      navigate('/perfil')
+      navigate('/inicio')
     } catch (caught) {
       setError(loginMessage(caught))
     } finally {
