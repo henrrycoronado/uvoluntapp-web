@@ -18,6 +18,11 @@ const weekdays = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom']
 const monthFormat = new Intl.DateTimeFormat('es-BO', { month: 'long', year: 'numeric' })
 const timeFormat = new Intl.DateTimeFormat('es-BO', { hour: '2-digit', minute: '2-digit' })
 
+const monthTitle = (date: Date) => {
+  const text = monthFormat.format(date)
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
 const dayKey = (date: Date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
 
 /** Calendario mensual: misma fuente que la lista (SCRUM-52). En pantallas angostas se usa la lista. */
@@ -47,7 +52,7 @@ export function ActivityCalendar({ items, onOpen }: ActivityCalendarProps) {
     <div className={styles.group}>
       <div className={styles.monthNav}>
         <Button size="sm" variant="secondary" onClick={() => shift(-1)} aria-label="Mes anterior">‹</Button>
-        <span className={styles.monthLabel} aria-live="polite">{monthFormat.format(month)}</span>
+        <span className={styles.monthLabel} aria-live="polite">{monthTitle(month)}</span>
         <Button size="sm" variant="secondary" onClick={() => shift(1)} aria-label="Mes siguiente">›</Button>
       </div>
       <div className={styles.calendar} role="grid" aria-label={`Calendario de ${monthFormat.format(month)}`}>

@@ -71,7 +71,7 @@
 }
 
 .itemSelected {
-  composes: item;
+  composes: itemButton;
   border-color: var(--color-accent);
 }
 
@@ -286,7 +286,6 @@
   min-width: 10rem;
   text-align: center;
   font-weight: 600;
-  text-transform: capitalize;
 }
 
 .group {
@@ -314,7 +313,8 @@
     grid-template-columns: 1fr;
   }
 
-  .calendar {
+  .calendar,
+  .segmented {
     display: none;
   }
 }
