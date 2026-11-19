@@ -1,0 +1,106 @@
+/*
+ * Design tokens as CSS custom properties.
+ * Imported once at the app root so every component can use var(--color-bg) etc.
+ *
+ * Brand source: Figma CJhE8ZHBPPTeTzyJNgBQLV, tokens in coord/brand/tokens.md.
+ * Typography: "Alan Sans" is not freely licensed for web embedding;
+ * we use Inter (OFL) as a fallback — noted in the report.
+ */
+
+:root {
+  /* ── Brand colors ── */
+  --color-bg: #1e1e1e;
+  --color-accent: #ffc100;
+  --color-text: #ffffff;
+
+  /* ── Extended palette ── */
+  --color-bg-raised: #2a2a2a;
+  --color-bg-surface: #333333;
+  --color-text-muted: #a0a0a0;
+  --color-text-on-accent: #1e1e1e;
+
+  --color-success: #22c55e;
+  --color-success-muted: #15803d;
+  --color-warning: #f59e0b;
+  --color-warning-muted: #b45309;
+  --color-error: #ef4444;
+  --color-error-muted: #b91c1c;
+  --color-error-bg: rgba(239, 68, 68, 0.1);
+
+  --color-focus-ring: rgba(255, 193, 0, 0.5);
+
+  /* ── Typography ── */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+
+  /* ── Spacing (4-px grid) ── */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* ── Radii ── */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.25);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+
+  /* ── Transitions ── */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+}
+
+/* ── Reset & base ── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Visible focus ring for keyboard navigation (accessibility) */
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
