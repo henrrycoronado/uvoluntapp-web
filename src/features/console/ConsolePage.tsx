@@ -6,6 +6,7 @@ import { AccessDenied } from '../../shared/ui'
 import { ProfileSection } from '../profile/ProfileSection'
 import { groupedSections, visibleSections } from './access'
 import styles from './console.module.css'
+import { ActivitiesSection } from './sections/ActivitiesSection'
 import { AdminGrantsSection } from './sections/AdminGrantsSection'
 import { ApprovalsSection } from './sections/ApprovalsSection'
 import { AuditSection } from './sections/AuditSection'
@@ -13,6 +14,7 @@ import { OverviewSection } from './sections/OverviewSection'
 import { PlaceholderSection } from './sections/PlaceholderSection'
 import { ProgramsSection } from './sections/ProgramsSection'
 import { RolesSection } from './sections/RolesSection'
+import { TeamSection } from './sections/TeamSection'
 import { UsersSection } from './sections/UsersSection'
 
 /** Consola de gestión: secciones agrupadas por feature según el rol, con perfil propio en la barra lateral. */
@@ -59,7 +61,9 @@ export function ConsolePage() {
           {current.id === 'asignaciones' && <RolesSection token={token} access={current.level} can={can} profile={profile} />}
           {current.id === 'administradores' && <AdminGrantsSection token={token} selfId={profile.id} />}
           {current.id === 'auditoria' && <AuditSection token={token} />}
-          {current.id === 'programas' && <ProgramsSection token={token} can={can} profile={profile} />}
+          {current.id === 'programas' && <ProgramsSection token={token} can={can} />}
+          {current.id === 'actividades' && <ActivitiesSection token={token} can={can} access={current.level} />}
+          {current.id === 'agregacion' && <TeamSection token={token} can={can} access={current.level} />}
           {!current.live && <PlaceholderSection section={current} />}
         </>
       )}
