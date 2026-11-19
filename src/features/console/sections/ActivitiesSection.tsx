@@ -4,7 +4,7 @@ import { Button } from '../../../shared/ui'
 import { ActivityCalendar } from '../../planning/ActivityCalendar'
 import { ActivityForm } from '../../planning/ActivityForm'
 import { planningApi, type Activity, type ActivityStatus } from '../../planning/api'
-import { activityPlace, activityStatusLabels, formatSchedule } from '../../planning/format'
+import { activityPlace, activityStatusLabels, dayRange, formatSchedule } from '../../planning/format'
 import planning from '../../planning/planning.module.css'
 import type { Access } from '../access'
 import styles from '../console.module.css'
@@ -31,6 +31,8 @@ export function ActivitiesSection({ token, can, access }: { token: string; can: 
   const [periodId, setPeriodId] = useState('')
   const [programId, setProgramId] = useState('')
   const [status, setStatus] = useState<ActivityStatus | ''>('')
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
   const [view, setView] = useState<'list' | 'calendar'>('list')
   const [selected, setSelected] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -43,6 +45,7 @@ export function ActivitiesSection({ token, can, access }: { token: string; can: 
       programId: programId && programId !== FREE ? programId : undefined,
       independent: programId === FREE ? true : undefined,
       status,
+      ...dayRange(from, to),
     }),
   )
 
@@ -102,7 +105,15 @@ export function ActivitiesSection({ token, can, access }: { token: string; can: 
               {(Object.keys(activityStatusLabels) as ActivityStatus[]).map((s) => <option key={s} value={s}>{activityStatusLabels[s]}</option>)}
             </select>
           </label>
-          <div className={planning.segmented} role="group" aria-label="Vista">
+          <label className={styles.label}>
+          <span>Desde</span>
+          <input type="date" className={styles.select} value={from} max={to || undefined} onChange={(e) => filter(setFrom)(e.target.value)} />
+        </label>
+        <label className={styles.label}>
+          <span>Hasta</span>
+          <input type="date" className={styles.select} value={to} min={from || undefined} onChange={(e) => filter(setTo)(e.target.value)} />
+        </label>
+        <div className={planning.segmented} role="group" aria-label="Vista">
             <button type="button" className={planning.segment} aria-pressed={view === 'list'} onClick={() => setView('list')}>Lista</button>
             <button type="button" className={planning.segment} aria-pressed={view === 'calendar'} onClick={() => setView('calendar')}>Calendario</button>
           </div>
@@ -158,6 +169,11 @@ export function ActivitiesSection({ token, can, access }: { token: string; can: 
             canCreateFree={can.isAdmin}
             periods={periods}
             onCancel={() => setCreating(false)}
+            checkConflicts={({ programId: target, plan }) =>
+              planningApi.activities
+                .checkConflicts(token, { programId: target, startsAt: plan.startsAt, endsAt: plan.endsAt, location: plan.location })
+                .then((r) => r.conflicts)
+            }
             onSubmit={({ programId: target, periodId: period, plan }) =>
               run(
                 async () => {

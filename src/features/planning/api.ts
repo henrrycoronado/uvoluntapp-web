@@ -100,6 +100,7 @@ export interface TeamMember {
   scopeId: string
   activityTitle?: string | null
   validUntil?: string | null
+  grantedBy?: string | null
 }
 
 export interface ActivityFilters {

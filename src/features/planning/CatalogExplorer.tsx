@@ -3,7 +3,7 @@ import { Button } from '../../shared/ui'
 import { describe } from '../console/sections/useAction'
 import { ActivityCalendar } from './ActivityCalendar'
 import { planningApi, type CatalogActivity, type CatalogProgram, type Period } from './api'
-import { activityPlace, activityStatusLabels, formatSchedule, modalityLabels } from './format'
+import { activityPlace, activityStatusLabels, dayRange, formatSchedule, modalityLabels } from './format'
 import consoleStyles from '../console/console.module.css'
 import styles from './planning.module.css'
 
@@ -63,6 +63,8 @@ export function CatalogActivities({ initialProgramId }: { initialProgramId?: str
   const [periodId, setPeriodId] = useState('')
   const [programId, setProgramId] = useState(initialProgramId ?? '')
   const [status, setStatus] = useState<'' | 'PUBLISHED' | 'IN_PROGRESS'>('')
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
   const [view, setView] = useState<'list' | 'calendar'>('list')
   const [open, setOpen] = useState<string | null>(null)
 
@@ -77,8 +79,9 @@ export function CatalogActivities({ initialProgramId }: { initialProgramId?: str
         programId: programId && programId !== FREE ? programId : undefined,
         independent: programId === FREE ? true : undefined,
         status,
+        ...dayRange(from, to),
       }),
-    [periodId, programId, status],
+    [periodId, programId, status, from, to],
   )
 
   const groups = useMemo(() => {
@@ -116,6 +119,14 @@ export function CatalogActivities({ initialProgramId }: { initialProgramId?: str
             <option value="PUBLISHED">Próximas</option>
             <option value="IN_PROGRESS">En ejecución</option>
           </select>
+        </label>
+        <label className={consoleStyles.label}>
+          <span>Desde</span>
+          <input type="date" className={consoleStyles.select} value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+        </label>
+        <label className={consoleStyles.label}>
+          <span>Hasta</span>
+          <input type="date" className={consoleStyles.select} value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
         </label>
         <div className={styles.segmented} role="group" aria-label="Vista">
           <button type="button" className={styles.segment} aria-pressed={view === 'list'} onClick={() => setView('list')}>Lista</button>

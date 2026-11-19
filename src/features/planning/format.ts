@@ -48,3 +48,11 @@ export function activityPlace(a: { modality: Modality; location?: string | null 
   if (a.modality === 'VIRTUAL') return 'Virtual'
   return a.location ? `${a.location}${a.modality === 'HYBRID' ? ' · también virtual' : ''}` : modalityLabels[a.modality]
 }
+
+/** Rango de días (inputs type="date", hora local) para los filtros fromDate/toDate de la API. */
+export function dayRange(from: string, to: string): { fromDate?: string; toDate?: string } {
+  return {
+    fromDate: from ? new Date(`${from}T00:00`).toISOString() : undefined,
+    toDate: to ? new Date(`${to}T23:59:59`).toISOString() : undefined,
+  }
+}

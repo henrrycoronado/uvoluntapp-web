@@ -58,6 +58,11 @@ export function ActivityDetail({ token, activity: a, can, programs, periods, onC
           canCreateFree={can.isAdmin}
           periods={periods}
           onCancel={() => setEditing(false)}
+          checkConflicts={({ plan }) =>
+            planningApi.activities
+              .checkConflicts(token, { activityId: a.id, startsAt: plan.startsAt, endsAt: plan.endsAt, location: plan.location })
+              .then((r) => r.conflicts)
+          }
           onSubmit={({ plan }) => run(() => planningApi.activities.update(token, a.id, plan), 'Actividad actualizada.', () => { setEditing(false); onChanged() })}
         />
       ) : (
