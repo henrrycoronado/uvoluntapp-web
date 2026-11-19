@@ -104,3 +104,15 @@ html {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+
+/* ── Tema claro: mismas reglas, otra superficie. El acento de marca se conserva. ── */
+:root[data-theme='light'] {
+  --color-bg: #f6f4ef;
+  --color-bg-raised: #ffffff;
+  --color-bg-surface: #ebe7de;
+  --color-text: #1e1e1e;
+  --color-text-muted: #5c5a55;
+  --color-text-on-accent: #1e1e1e;
+  --color-error-bg: rgba(185, 28, 28, 0.08);
+  --color-error: #b91c1c;
+}
