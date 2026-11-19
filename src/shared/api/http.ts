@@ -3,6 +3,8 @@ export interface ProblemDetails {
   title: string
   status: number
   detail?: string
+  /** Campos extra del Problem Details (por ejemplo accountStatus o reapplyAvailableAt). */
+  [extension: string]: unknown
 }
 
 export class ApiError extends Error {
@@ -25,28 +27,57 @@ interface RequestOptions {
   token?: string
 }
 
-/** Cliente HTTP mínimo: JSON, Bearer y errores como ApiError (Problem Details del backend). */
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+/** Recibe el token rechazado y devuelve uno vigente, o null si la sesión ya no se puede renovar. */
+type TokenRefresher = (rejectedToken: string) => Promise<string | null>
+
+let refresher: TokenRefresher | null = null
+
+/** La sesión registra aquí cómo renovar el token de acceso cuando vence. */
+export function setTokenRefresher(fn: TokenRefresher | null): void {
+  refresher = fn
+}
+
+async function send(path: string, options: RequestOptions, token?: string): Promise<Response> {
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (options.body !== undefined) headers['Content-Type'] = 'application/json'
-  if (options.token) headers.Authorization = `Bearer ${options.token}`
+  if (token) headers.Authorization = `Bearer ${token}`
 
-  const response = await fetch(`${baseUrl}${path}`, {
+  // credentials: la cookie de prueba del registro debe llegar a complete-registration.
+  return fetch(`${baseUrl}${path}`, {
     method: options.method ?? 'GET',
     headers,
+    credentials: 'include',
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   })
+}
 
-  const text = await response.text()
-  const data: unknown = text ? JSON.parse(text) : undefined
+function parse(text: string): unknown {
+  if (!text) return undefined
+  try {
+    return JSON.parse(text)
+  } catch {
+    return undefined
+  }
+}
+
+/** Cliente HTTP mínimo: JSON, Bearer con renovación automática y errores como ApiError (Problem Details). */
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  let response = await send(path, options, options.token)
+
+  if (response.status === 401 && options.token && refresher) {
+    const renewed = await refresher(options.token)
+    if (renewed) response = await send(path, options, renewed)
+  }
+
+  const data = parse(await response.text())
 
   if (!response.ok) {
-    const fallback: ProblemDetails = {
-      type: 'about:blank',
-      title: 'No se pudo completar la operación.',
-      status: response.status,
-    }
-    throw new ApiError((data as ProblemDetails | undefined) ?? fallback)
+    const problem = data as ProblemDetails | undefined
+    throw new ApiError(
+      problem && typeof problem.status === 'number'
+        ? problem
+        : { type: 'about:blank', title: 'No se pudo completar la operación.', status: response.status },
+    )
   }
 
   return data as T

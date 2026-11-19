@@ -100,7 +100,7 @@ function ManageRoles({ token, can }: { token: string; can: Capabilities }) {
                 <td>{userName(r.userId)}</td>
                 <td>{roleLabels[r.role] ?? r.role}</td>
                 <td>{r.scope === 'GLOBAL' ? (r.role === 'ADMIN' ? 'Global' : 'Sin programa asignado') : programName(r.scopeId)}</td>
-                <td>{r.revokedAt ? 'Revocado' : 'Vigente'}</td>
+                <td>{assignmentState(r)}</td>
                 <td>
                   {canRevoke(r) && (
                     <ConfirmButton
@@ -119,6 +119,14 @@ function ManageRoles({ token, can }: { token: string; can: Capabilities }) {
   )
 }
 
+function assignmentState(r: RoleAssignment): string {
+  if (r.revokedAt) return 'Revocado'
+  if (!r.validUntil) return 'Vigente'
+  const until = new Date(r.validUntil)
+  const date = until.toLocaleDateString('es-BO')
+  return until < new Date() ? `Vencido el ${date}` : `Vigente hasta el ${date}`
+}
+
 interface AssignFormProps {
   can: Capabilities
   users: UserSummary[]
@@ -134,8 +142,10 @@ function AssignForm({ can, users, programs, onAssign }: AssignFormProps) {
   const [userId, setUserId] = useState('')
   const [role, setRole] = useState<NewRoleAssignment['role']>(roleOptions[0])
   const [programId, setProgramId] = useState('')
+  const [until, setUntil] = useState('')
 
   const allowNoProgram = can.isAdmin && role === 'PROGRAM_LEADER'
+  const today = new Date().toISOString().slice(0, 10)
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -144,40 +154,45 @@ function AssignForm({ can, users, programs, onAssign }: AssignFormProps) {
       role,
       scope: programId ? 'PROGRAM' : 'GLOBAL',
       scopeId: programId || null,
+      // La vigencia cubre el día elegido completo.
+      validUntil: until ? new Date(`${until}T23:59:59`).toISOString() : null,
     })
   }
 
   return (
     <form className={styles.formRow} onSubmit={submit} aria-label="Asignar rol">
       <Field label="Persona">
-          {(id) => (
-            <select id={id} className={styles.select} value={userId} onChange={(e) => setUserId(e.target.value)} required>
-          <option value="">Elige una persona</option>
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>{u.firstName} {u.lastName} · {u.email}</option>
-          ))}
-        </select>
-          )}
-        </Field>
+        {(id) => (
+          <select id={id} className={styles.select} value={userId} onChange={(e) => setUserId(e.target.value)} required>
+            <option value="">Elige una persona</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>{u.firstName} {u.lastName} · {u.email}</option>
+            ))}
+          </select>
+        )}
+      </Field>
       <Field label="Rol">
-          {(id) => (
-            <select id={id} className={styles.select} value={role} onChange={(e) => setRole(e.target.value as NewRoleAssignment['role'])}>
-          {roleOptions.map((r) => (
-            <option key={r} value={r}>{roleLabels[r]}</option>
-          ))}
-        </select>
-          )}
-        </Field>
+        {(id) => (
+          <select id={id} className={styles.select} value={role} onChange={(e) => setRole(e.target.value as NewRoleAssignment['role'])}>
+            {roleOptions.map((r) => (
+              <option key={r} value={r}>{roleLabels[r]}</option>
+            ))}
+          </select>
+        )}
+      </Field>
       <Field label="Programa">
-          {(id) => (
-            <select id={id} className={styles.select} value={programId} onChange={(e) => setProgramId(e.target.value)} required={!allowNoProgram}>
-          <option value="">{allowNoProgram ? 'Sin programa por ahora' : 'Elige un programa'}</option>
-          {programs.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-          )}
-        </Field>
+        {(id) => (
+          <select id={id} className={styles.select} value={programId} onChange={(e) => setProgramId(e.target.value)} required={!allowNoProgram}>
+            <option value="">{allowNoProgram ? 'Sin programa por ahora' : 'Elige un programa'}</option>
+            {programs.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        )}
+      </Field>
+      <Field label="Vigente hasta (opcional)">
+        {(id) => <input id={id} type="date" className={styles.select} min={today} value={until} onChange={(e) => setUntil(e.target.value)} />}
+      </Field>
       <Button type="submit" variant="primary" disabled={!userId || (!allowNoProgram && !programId)}>
         Asignar
       </Button>
