@@ -62,6 +62,10 @@ export function ProfileSection({ token, profile, onSaved }: ProfileSectionProps)
           <dl className={styles.facts}>
             <div><dt>Cuenta</dt><dd>{statusLabels[profile.accountStatus] ?? profile.accountStatus}</dd></div>
             <div>
+              <dt>Verificación</dt>
+              <dd>{profile.verifiedAt ? 'Verificada' : 'Pendiente: un administrador la revisará'}</dd>
+            </div>
+            <div>
               <dt>Roles</dt>
               <dd>{activeRoles.length === 0 ? 'Voluntario' : ['Voluntario', ...activeRoles.map((r) => roleLabels[r.role] ?? r.role)].join(', ')}</dd>
             </div>

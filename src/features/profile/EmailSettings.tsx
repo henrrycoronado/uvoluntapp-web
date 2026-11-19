@@ -79,7 +79,10 @@ function AccessEmail({ token, profile }: { token: string; profile: ProfileView }
             <>
               <TextField label="Correo nuevo" type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
               <TextField label="Contraseña actual" type="password" autoComplete="current-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-              <p className={styles.muted}>Al confirmar el correo nuevo se cerrarán todas tus sesiones.</p>
+              <p className={styles.muted}>
+                Al confirmar el correo nuevo se cerrarán todas tus sesiones. Si no es un correo @ucb.edu.bo, tu cuenta quedará
+                sin verificar hasta que un administrador la revise.
+              </p>
             </>
           ) : (
             <TextField label="Código" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.replace(/\D/g, '') })} required />
