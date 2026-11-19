@@ -4,16 +4,18 @@ import { useSection } from '../../shared/layout/useSection'
 import { useCurrentUser } from '../../shared/session/useCurrentUser'
 import { AccessDenied } from '../../shared/ui'
 import { ProfileSection } from '../profile/ProfileSection'
-import { visibleSections } from './access'
+import { groupedSections, visibleSections } from './access'
 import styles from './console.module.css'
 import { AdminGrantsSection } from './sections/AdminGrantsSection'
 import { ApprovalsSection } from './sections/ApprovalsSection'
 import { AuditSection } from './sections/AuditSection'
+import { OverviewSection } from './sections/OverviewSection'
 import { PlaceholderSection } from './sections/PlaceholderSection'
+import { ProgramsSection } from './sections/ProgramsSection'
 import { RolesSection } from './sections/RolesSection'
 import { UsersSection } from './sections/UsersSection'
 
-/** Consola de gestión: secciones según el rol, con perfil propio en la barra lateral. */
+/** Consola de gestión: secciones agrupadas por feature según el rol, con perfil propio en la barra lateral. */
 export function ConsolePage() {
   const [user, reloadUser] = useCurrentUser()
   const sections = user.status === 'ready' ? visibleSections(user.can) : []
@@ -32,20 +34,14 @@ export function ConsolePage() {
   }
 
   const current = sections.find((s) => s.id === selected)
-  const groups = [
-    { label: 'Disponible', items: sections.filter((s) => s.module === 'Módulo 1').map((s) => ({ id: s.id, label: s.title })) },
-    { label: 'Próximamente', items: sections.filter((s) => s.module !== 'Módulo 1').map((s) => ({ id: s.id, label: s.title })) },
-  ]
+  const groups = groupedSections(can).map((group) => ({
+    label: group.feature === 'Resumen' ? undefined : group.feature,
+    items: group.sections.map((s) => ({ id: s.id, label: s.title })),
+  }))
   const token = session.accessToken
 
   return (
-    <AppShell
-      area="Consola"
-      groups={groups}
-      active={selected}
-      onSelect={select}
-      switchAction={{ label: 'Volver a mi espacio', onClick: () => navigate('/inicio') }}
-    >
+    <AppShell area="Consola" groups={groups} active={selected} onSelect={select} switchAction={{ label: 'Volver a mi espacio', onClick: () => navigate('/inicio') }}>
       {selected === 'perfil' || !current ? (
         <>
           <h1 className={styles.heading}>Perfil</h1>
@@ -53,21 +49,18 @@ export function ConsolePage() {
         </>
       ) : (
         <>
-          <div className={styles.topbar}>
-            <div>
-              <h1 className={styles.heading}>{current.title}</h1>
-              <p className={styles.summary}>{current.summary}</p>
-            </div>
-            <span className={current.level === 'edit' ? styles.badgeEdit : styles.badge}>
-              {current.level === 'edit' ? 'Puedes gestionar' : 'Solo consulta'}
-            </span>
+          <div>
+            <h1 className={styles.heading}>{current.title}</h1>
+            <p className={styles.summary}>{current.summary}</p>
           </div>
+          {current.id === 'resumen' && <OverviewSection token={token} can={can} profile={profile} onOpen={select} />}
           {current.id === 'usuarios' && <UsersSection token={token} access={current.level} />}
           {current.id === 'aprobaciones' && <ApprovalsSection token={token} />}
           {current.id === 'asignaciones' && <RolesSection token={token} access={current.level} can={can} profile={profile} />}
           {current.id === 'administradores' && <AdminGrantsSection token={token} selfId={profile.id} />}
           {current.id === 'auditoria' && <AuditSection token={token} />}
-          {current.module !== 'Módulo 1' && <PlaceholderSection section={current} canEdit={current.level === 'edit'} />}
+          {current.id === 'programas' && <ProgramsSection token={token} can={can} profile={profile} />}
+          {!current.live && <PlaceholderSection section={current} />}
         </>
       )}
     </AppShell>

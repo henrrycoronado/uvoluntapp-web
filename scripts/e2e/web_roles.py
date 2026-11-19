@@ -50,7 +50,7 @@ def login(page, email, password=PWD):
 
 
 def logout(page):
-    page.get_by_role("button", name="Perfil").click()
+    page.get_by_role("button", name="Perfil", exact=True).click()
     page.get_by_role("button", name="Cerrar sesión").click()
     expect(page.get_by_role("heading", name="Iniciar sesión")).to_be_visible(timeout=10000)
 
@@ -80,14 +80,18 @@ with sync_playwright() as p:
 
     # ADMIN
     login(page, os.environ["DEV_ADMIN_1_EMAIL"], os.environ["DEV_ADMIN_1_PASSWORD"])
-    page.get_by_role("button", name="Perfil").click()
+    page.get_by_role("button", name="Perfil", exact=True).click()
     page.get_by_role("button", name="Claro").click()
     check("tema claro desde el perfil", page.evaluate("document.documentElement.dataset.theme") == "light")
     page.get_by_role("button", name="Oscuro").click()
     nav = open_console(page)
     for s in ["Usuarios", "Aprobación de cuentas", "Roles y permisos", "Administradores", "Auditoría", "Programas", "Financiero"]:
         check(f"admin ve {s}", nav.get_by_role("button", name=s, exact=True).is_visible())
-    check("la consola tiene Perfil en la barra lateral", page.get_by_role("button", name="Perfil").is_visible())
+    check("la consola tiene Perfil en la barra lateral", page.get_by_role("button", name="Perfil", exact=True).is_visible())
+    check("la consola agrupa por features", page.get_by_text("Personas y accesos").is_visible() and page.get_by_text("Participación").is_visible())
+    check("la consola ya no muestra la etiqueta de permiso", page.get_by_text("Puedes gestionar").count() == 0)
+    expect(page.get_by_text("Cuentas externas por revisar")).to_be_visible(timeout=10000)
+    check("el resumen muestra cifras del admin", True)
     nav.get_by_role("button", name="Roles y permisos", exact=True).click()
     assign(page, target_pl, "Líder de programa", "Voluntariado comunitario")
     check("admin asigna líder de programa", True)
@@ -120,8 +124,11 @@ with sync_playwright() as p:
     check("operativo ve registros", nav.get_by_role("button", name="Registros", exact=True).is_visible())
     check("operativo NO ve reportes e IA", nav.get_by_role("button", name="Reportes e IA", exact=True).count() == 0)
     nav.get_by_role("button", name="Usuarios", exact=True).click()
-    expect(page.get_by_text("Solo consulta")).to_be_visible(timeout=10000)
-    check("operativo revisa usuarios sin acciones", page.get_by_role("button", name="Dar de baja").count() == 0)
+    expect(page.get_by_role("columnheader", name="Correo")).to_be_visible(timeout=10000)
+    check("operativo revisa usuarios sin acciones", page.get_by_role("button", name="Dar de baja").count() == 0 and page.get_by_role("columnheader", name="Acciones").count() == 0)
+    nav.get_by_role("button", name="Programas", exact=True).click()
+    expect(page.get_by_role("heading", name="Programas donde apoyas como líder operativo")).to_be_visible(timeout=10000)
+    check("operativo ve sus programas y el resto solo de consulta", page.get_by_role("heading", name="Otros programas · solo consulta").is_visible())
     logout(page)
 
     # LÍDER SIN PROGRAMA (sembrado)

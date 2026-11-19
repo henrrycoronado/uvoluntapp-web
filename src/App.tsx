@@ -6,6 +6,7 @@ import { RegisterPage } from './features/auth/screens/RegisterPage'
 import { ConsolePage } from './features/console/ConsolePage'
 import { HomePage } from './features/home/HomePage'
 import { LandingPage } from './features/landing/LandingPage'
+import { readSession } from './features/auth/session'
 import { useTheme } from './shared/theme/theme'
 
 function Redirect({ to }: { to: string }) {
@@ -16,6 +17,12 @@ function Redirect({ to }: { to: string }) {
 export default function App() {
   const pathname = usePathname()
   useTheme()
+
+  // Con sesión abierta, la landing y las pantallas de acceso llevan directo al espacio de la persona.
+  const publicOnly = ['/', '/acceso', '/registro', '/verificar']
+  if (readSession() && publicOnly.includes(pathname)) {
+    return <Redirect to="/inicio" />
+  }
 
   switch (pathname) {
     case '/acceso':
