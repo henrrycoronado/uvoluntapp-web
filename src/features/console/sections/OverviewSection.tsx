@@ -1,6 +1,7 @@
 import type { ProfileView } from '../../profile/api'
 import type { Capabilities } from '../../../shared/session/capabilities'
 import { activeRolesByRank, roleLabels } from '../../../shared/session/roles'
+import { planningApi } from '../../planning/api'
 import { consoleApi } from '../api'
 import styles from '../console.module.css'
 import { useLoad } from './useLoad'
@@ -37,6 +38,10 @@ export function OverviewSection({ token, can, profile, onOpen }: OverviewProps) 
         value: can.isAdmin ? active.length : active.filter((r) => r.role === 'OPERATIONAL_LEADER').length,
         section: 'asignaciones',
       })
+    }
+    if (can.isAdmin || can.isProgramLeader) {
+      const drafts = await planningApi.activities.list(token, { status: 'DRAFT' })
+      result.push({ label: 'Actividades en borrador', value: drafts.meta.totalCount, section: 'actividades' })
     }
     return result
   })

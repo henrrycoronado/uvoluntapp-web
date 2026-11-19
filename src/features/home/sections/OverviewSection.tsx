@@ -1,20 +1,21 @@
 import type { ProfileView } from '../../profile/api'
 import { activeRolesByRank, roleLabels } from '../../../shared/session/roles'
 import { useLoad } from '../../console/sections/useLoad'
-import { homeApi } from '../api'
+import { planningApi } from '../../planning/api'
+import { activityPlace, formatSchedule } from '../../planning/format'
 import styles from '../home.module.css'
 
 interface OverviewProps {
-  token: string
   profile: ProfileView
   onOpen: (sectionId: string) => void
 }
 
 /** Panel de inicio: cifras propias, próximos pasos y la Pastoral. */
-export function OverviewSection({ token, profile, onOpen }: OverviewProps) {
-  const [programs] = useLoad(() => homeApi.programs(token))
+export function OverviewSection({ profile, onOpen }: OverviewProps) {
+  const [programs] = useLoad(() => planningApi.catalog.programs())
+  const [upcoming] = useLoad(() => planningApi.catalog.activities({ status: 'PUBLISHED' }))
   const roles = activeRolesByRank(profile.roles)
-  const activePrograms = programs.status === 'ready' ? programs.data.items.filter((p) => p.status === 'ACTIVE').length : null
+  const activePrograms = programs.status === 'ready' ? programs.data.meta.totalCount : null
 
   const stats = [
     { label: 'Programas activos', value: activePrograms ?? '—', section: 'programas' },
@@ -46,8 +47,22 @@ export function OverviewSection({ token, profile, onOpen }: OverviewProps) {
       <div className={styles.pair}>
         <article className={styles.card}>
           <h2 className={styles.cardTitle}>Próximas actividades</h2>
-          <p className={styles.muted}>Cuando te inscribas en una actividad, la verás aquí con su fecha y lugar.</p>
-          <button type="button" className={styles.link} onClick={() => onOpen('programas')}>Explorar programas</button>
+          {upcoming.status === 'ready' && upcoming.data.items.length > 0 ? (
+            <ul className={styles.upcoming}>
+              {[...upcoming.data.items]
+                .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+                .slice(0, 3)
+                .map((a) => (
+                  <li key={a.id}>
+                    <strong>{a.title}</strong>
+                    <span className={styles.muted}>{formatSchedule(a.startsAt, a.endsAt)} · {activityPlace(a)}</span>
+                  </li>
+                ))}
+            </ul>
+          ) : (
+            <p className={styles.muted}>{upcoming.status === 'loading' ? 'Cargando…' : 'Aún no hay actividades publicadas.'}</p>
+          )}
+          <button type="button" className={styles.link} onClick={() => onOpen('actividades')}>Ver todas las actividades</button>
         </article>
         <article className={styles.card}>
           <h2 className={styles.cardTitle}>Tu cuenta</h2>

@@ -35,6 +35,15 @@ describe('matriz de acceso de la consola', () => {
     expect(operative.aprobaciones).toBeUndefined()
   })
 
+  it('M2: actividades y agregación están activas; gestionan ADMIN y PL, el operativo revisa', () => {
+    const live = Object.fromEntries(visibleSections({ ...base, isAdmin: true }).map((s) => [s.id, s.live]))
+    expect(live.actividades).toBe(true)
+    expect(live.agregacion).toBe(true)
+    expect(levels({ ...base, isProgramLeader: true }).actividades).toBe('edit')
+    expect(levels({ ...base, isOperationalLeader: true }).actividades).toBe('review')
+    expect(levels({ ...base, isOperationalLeader: true }).agregacion).toBe('review')
+  })
+
   it('un voluntario no ve secciones de la consola', () => {
     expect(visibleSections({ ...base, canOpenConsole: false })).toHaveLength(0)
   })

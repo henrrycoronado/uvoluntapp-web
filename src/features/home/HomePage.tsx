@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { navigate } from '../../app/navigation'
 import { AppShell } from '../../shared/layout/AppShell'
 import { useSection } from '../../shared/layout/useSection'
@@ -20,6 +21,7 @@ const ids = ['inicio', 'programas', 'actividades', 'registros', 'perfil']
 export function HomePage() {
   const [user, reloadUser] = useCurrentUser()
   const [section, select] = useSection('/inicio', ids, 'inicio')
+  const [programFilter, setProgramFilter] = useState<string | undefined>()
 
   if (user.status === 'loading') return <main className={styles.muted}>Cargando…</main>
   if (user.status === 'error') return <main><p role="alert" className={styles.alert}>{user.message}</p></main>
@@ -30,12 +32,22 @@ export function HomePage() {
       area="Mi espacio"
       groups={groups}
       active={section}
-      onSelect={select}
+      onSelect={(id) => {
+        setProgramFilter(undefined)
+        select(id)
+      }}
       switchAction={user.can.canOpenConsole ? { label: 'Consola Uvoluntapp', onClick: () => navigate('/consola') } : undefined}
     >
-      {section === 'inicio' && <OverviewSection token={token} profile={user.profile} onOpen={select} />}
-      {section === 'programas' && <ProgramsSection token={token} reviewer={user.can.canOpenConsole} />}
-      {section === 'actividades' && <ActivitiesSection token={token} />}
+      {section === 'inicio' && <OverviewSection profile={user.profile} onOpen={select} />}
+      {section === 'programas' && (
+        <ProgramsSection
+          onSeeActivities={(p) => {
+            setProgramFilter(p.id)
+            select('actividades')
+          }}
+        />
+      )}
+      {section === 'actividades' && <ActivitiesSection programId={programFilter} />}
       {section === 'registros' && <RecordsSection />}
       {section === 'perfil' && (
         <>

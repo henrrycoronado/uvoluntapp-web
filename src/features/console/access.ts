@@ -86,25 +86,15 @@ export const sections: SectionDefinition[] = [
     title: 'Actividades',
     summary: 'Calendario, cupos y estados de cada actividad.',
     feature: 'Programas',
-    live: false,
-    module: 'Módulo 2',
-    plans: {
-      edit: ['Crear y publicar actividades en tus programas', 'Ajustar cupos, horarios y lugar', 'Reprogramar con historial', 'Cancelar o finalizar actividades'],
-      review: ['Ver el calendario de actividades', 'Consultar cupos y estados'],
-    },
+    live: true,
     access: managersEditOperativeReviews,
   },
   {
     id: 'agregacion',
     title: 'Agregación a programas',
-    summary: 'Personas y responsables vinculados a cada programa.',
+    summary: 'Equipo de líderes de cada programa y sus delegaciones.',
     feature: 'Programas',
-    live: false,
-    module: 'Módulo 2',
-    plans: {
-      edit: ['Sumar voluntarios a tus programas', 'Retirar personas con motivo registrado'],
-      review: ['Ver quién participa en cada programa'],
-    },
+    live: true,
     access: managersEditOperativeReviews,
   },
   {
