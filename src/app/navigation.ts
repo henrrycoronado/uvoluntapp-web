@@ -11,6 +11,8 @@ export function usePathname(): string {
 
   useEffect(() => {
     const onChange = () => setPathname(window.location.pathname)
+    // Un efecto hijo pudo navegar antes de suscribirse: sincroniza con la ruta actual.
+    onChange()
     window.addEventListener('popstate', onChange)
     return () => window.removeEventListener('popstate', onChange)
   }, [])
