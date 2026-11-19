@@ -1,6 +1,6 @@
 # AGENTS.md · uvoluntapp-web
 
-Reglas para cualquier agente que trabaje en este repositorio. Las reglas de negocio están en `~/uvoluntapp/coord/CONTEXT.md`.
+Reglas para cualquier agente que trabaje en este repositorio. Las reglas de negocio están en `~/Documents/GitHub/coord/CONTEXT.md`.
 
 ## Stack
 - React + TypeScript con Vite. El cliente HTTP se genera desde `contracts/openapi.yaml` del backend; no escribas llamadas a la API a mano.
@@ -21,6 +21,6 @@ Reglas para cualquier agente que trabaje en este repositorio. Las reglas de nego
 1. Trabaja solo en los archivos que permite tu tarjeta de tarea.
 2. No modifiques el cliente generado ni `.github/`.
 3. No hagas `git push` ni operaciones en Jira o GitHub. Commit local solamente.
-4. Commits: `tipo(SCRUM-xx): descripción`.
+4. Commits: `tipo(SCRUM-xx): descripción`. Solo las tarjetas sin historia de Jira (pruebas de humo, infraestructura) usan `tipo(alcance): descripción`, por ejemplo `test(smoke): ...`.
 5. Si el contrato no tiene lo que necesitas, no lo inventes: anótalo en tu informe.
 6. Entrega siempre `coord/reports/T-xxx.md` con la plantilla.
