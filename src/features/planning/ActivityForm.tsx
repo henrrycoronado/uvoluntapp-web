@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { Button } from '../../shared/ui'
 import { Field } from '../console/sections/Field'
-import type { Activity, ActivityPlan, Modality, Period, PlanningProgram } from './api'
+import type { Activity, ActivityPlan, ConflictWarning, Modality, Period, PlanningProgram } from './api'
 import { fromLocalInput, modalityLabels, toLocalInput } from './format'
 import consoleStyles from '../console/console.module.css'
 import styles from './planning.module.css'
@@ -142,6 +142,8 @@ interface ActivityFormProps {
   periods: Period[]
   onSubmit: (value: ActivityFormSubmit) => Promise<void>
   onCancel: () => void
+  /** Advertencias de solapamiento (SCRUM-54): si hay, se muestran y se guarda solo al confirmar. */
+  checkConflicts?: (value: ActivityFormSubmit) => Promise<ConflictWarning[]>
 }
 
 /**
@@ -149,10 +151,11 @@ interface ActivityFormProps {
  * sin registro previo no hay cupo; el lugar y el enlace dependen de la modalidad. En una actividad publicada
  * o en ejecución solo cambian los campos informativos y el cupo hacia arriba (el horario va por reprogramación).
  */
-export function ActivityForm({ activity, programs, canCreateFree, periods, onSubmit, onCancel }: ActivityFormProps) {
+export function ActivityForm({ activity, programs, canCreateFree, periods, onSubmit, onCancel, checkConflicts }: ActivityFormProps) {
   const [draft, setDraft] = useState(() => initialDraft(activity, programs, canCreateFree, periods))
   const [errors, setErrors] = useState<Partial<Record<keyof ActivityDraft, string>>>({})
   const [busy, setBusy] = useState(false)
+  const [warnings, setWarnings] = useState<{ key: string; items: ConflictWarning[] } | null>(null)
 
   const creating = !activity
   const locked = !!activity && activity.status !== 'DRAFT'
@@ -169,7 +172,17 @@ export function ActivityForm({ activity, programs, canCreateFree, periods, onSub
     if (Object.keys(found).length > 0) return
     setBusy(true)
     try {
-      await onSubmit({ programId: isFree ? null : draft.programId, periodId: draft.periodId, plan: toPlan(draft) })
+      const value = { programId: isFree ? null : draft.programId, periodId: draft.periodId, plan: toPlan(draft) }
+      // La advertencia no bloquea: el responsable decide guardar igual con un segundo clic.
+      const key = JSON.stringify([value.programId, value.plan.startsAt, value.plan.endsAt, value.plan.location])
+      if (checkConflicts && !locked && warnings?.key !== key) {
+        const found = await checkConflicts(value).catch(() => [])
+        if (found.length > 0) {
+          setWarnings({ key, items: found })
+          return
+        }
+      }
+      await onSubmit(value)
     } finally {
       setBusy(false)
     }
@@ -384,9 +397,14 @@ export function ActivityForm({ activity, programs, canCreateFree, periods, onSub
         </Field>
       </fieldset>
 
+      {warnings && (
+        <ul className={styles.warnings} aria-label="Advertencias de conflicto">
+          {warnings.items.map((c) => <li key={`${c.type}-${c.conflictingActivityId}`}>{c.message}</li>)}
+        </ul>
+      )}
       <div className={consoleStyles.actions}>
         <Button type="submit" variant="primary" disabled={busy}>
-          {busy ? 'Guardando…' : creating ? 'Crear borrador' : 'Guardar cambios'}
+          {busy ? 'Guardando…' : warnings ? 'Guardar de todos modos' : creating ? 'Crear borrador' : 'Guardar cambios'}
         </Button>
         <Button type="button" variant="secondary" onClick={onCancel} disabled={busy}>Cancelar</Button>
       </div>

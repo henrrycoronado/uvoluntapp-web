@@ -117,4 +117,23 @@ describe('ActivityForm', () => {
     expect(plan.capacity).toBeNull()
     expect(plan.meetingUrl).toBeNull()
   })
+
+  it('advierte solapamientos y guarda solo al confirmar', async () => {
+    const onSubmit = vi.fn(async () => {})
+    const checkConflicts = vi.fn(async () => [
+      { type: 'LOCATION_OVERLAP' as const, conflictingActivityId: 'x', conflictingActivityTitle: 'Otra', message: 'El lugar "Plaza" ya está ocupado por "Otra".' },
+    ])
+    renderForm({ onSubmit, checkConflicts })
+    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Visita' } })
+    fireEvent.change(screen.getByLabelText('Lugar'), { target: { value: 'Plaza' } })
+    fireEvent.change(screen.getByLabelText('Inicio'), { target: { value: '2026-11-22T09:00' } })
+    fireEvent.change(screen.getByLabelText('Fin'), { target: { value: '2026-11-22T11:00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Crear borrador' }))
+    expect(await screen.findByText(/ya está ocupado/)).toBeInTheDocument()
+    expect(onSubmit).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar de todos modos' }))
+    await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    expect(checkConflicts).toHaveBeenCalledTimes(1)
+  })
 })

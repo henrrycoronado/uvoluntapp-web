@@ -49,7 +49,13 @@ export function TeamSection({ token, can, access }: { token: string; can: Capabi
 
 function Team({ token, program, can, editable }: { token: string; program: PlanningProgram; can: Capabilities; editable: boolean }) {
   const [team, reload] = useLoad(() => planningApi.programs.team(token, program.id))
+  // Nombres de quien asignó; si la persona no puede listar usuarios, la columna queda sin nombre.
+  const [people] = useLoad(() => consoleApi.users.list(token).catch(() => null))
   const { message, run } = useAction()
+  const grantedBy = (id?: string | null) => {
+    const u = people.status === 'ready' ? people.data?.items.find((x) => x.id === id) : undefined
+    return u ? `${u.firstName} ${u.lastName}` : '—'
+  }
 
   if (team.status === 'loading') return <p className={styles.muted}>Cargando equipo…</p>
   if (team.status === 'error') return <p role="alert" className={styles.alert}>{team.message}</p>
@@ -72,6 +78,7 @@ function Team({ token, program, can, editable }: { token: string; program: Plann
               <th>Persona</th>
               <th>Rol</th>
               <th>Vigencia</th>
+              <th>Asignado por</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -81,6 +88,7 @@ function Team({ token, program, can, editable }: { token: string; program: Plann
                 <td>{m.fullName}<br /><span className={styles.muted}>{m.email}</span></td>
                 <td>{roleLabels[m.role]}</td>
                 <td>{m.validUntil ? `Hasta el ${new Date(m.validUntil).toLocaleDateString('es-BO')}` : 'Sin vencimiento'}</td>
+                <td>{grantedBy(m.grantedBy)}</td>
                 <td>{canRevoke(m) && <ConfirmButton label="Revocar" confirmLabel="Confirmar revocación" onConfirm={() => revoke(m)} />}</td>
               </tr>
             ))}
