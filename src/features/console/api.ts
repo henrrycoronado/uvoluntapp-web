@@ -12,6 +12,8 @@ export interface UserSummary {
   lastName: string
   accountStatus: string
   createdAt: string
+  /** null: la cuenta espera la verificación manual de un ADMIN. */
+  verifiedAt?: string | null
 }
 
 export interface ApprovalRequest {
@@ -86,6 +88,10 @@ export const consoleApi = {
   users: {
     list: (token: string, search?: string) =>
       request<Paginated<UserSummary>>(`/users${query({ search, pageSize: '100' })}`, { token }),
+    verify: (token: string, userId: string) =>
+      request<{ message: string }>(`/users/${userId}/verify`, { method: 'POST', token }),
+    changeEmail: (token: string, userId: string, newEmail: string, reason: string) =>
+      request<{ message: string }>(`/users/${userId}/change-email`, { method: 'POST', body: { newEmail, reason }, token }),
     suspend: (token: string, userId: string, reason: string) =>
       request<{ message: string }>(`/users/${userId}/suspend`, { method: 'POST', body: { reason }, token }),
     reactivate: (token: string, userId: string) =>

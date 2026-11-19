@@ -17,6 +17,8 @@ export interface ProfileView {
   phone?: string | null
   institutionalEmail?: string | null
   institutionalEmailVerifiedAt?: string | null
+  /** Verificación de la cuenta: automática con correo institucional o manual por un ADMIN. */
+  verifiedAt?: string | null
   accountStatus: string
   roles: RoleView[]
   createdAt: string
