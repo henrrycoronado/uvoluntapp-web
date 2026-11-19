@@ -52,9 +52,11 @@ export interface AdminGrant {
 export interface AuditEvent {
   id: string
   actorId?: string | null
+  actorType?: string
   action: string
   entityType: string
   entityId: string
+  details?: Record<string, unknown> | null
   createdAt: string
 }
 
@@ -70,6 +72,8 @@ export interface NewRoleAssignment {
   role: 'PROGRAM_LEADER' | 'OPERATIONAL_LEADER'
   scope: 'GLOBAL' | 'PROGRAM'
   scopeId: string | null
+  /** Fin de la vigencia (UTC); null es sin vencimiento. */
+  validUntil: string | null
 }
 
 const query = (params: Record<string, string | undefined>) => {
