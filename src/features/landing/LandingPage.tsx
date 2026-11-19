@@ -1,4 +1,5 @@
 import { navigate } from '../../app/navigation'
+import { CatalogActivities, CatalogPrograms } from '../planning/CatalogExplorer'
 import styles from './landing.module.css'
 
 const steps = [
@@ -43,6 +44,17 @@ export function LandingPage() {
               </li>
             ))}
           </ol>
+        </section>
+
+        <section className={styles.block} aria-labelledby="actividades">
+          <h2 id="actividades" className={styles.blockTitle}>Próximas actividades</h2>
+          <p className={styles.text}>Mira lo que viene sin iniciar sesión. Para participar, crea tu cuenta.</p>
+          <CatalogActivities />
+        </section>
+
+        <section className={styles.block} aria-labelledby="programas">
+          <h2 id="programas" className={styles.blockTitle}>Programas</h2>
+          <CatalogPrograms />
         </section>
 
         <section className={styles.block} aria-labelledby="para-quien">
