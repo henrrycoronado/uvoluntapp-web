@@ -16,6 +16,7 @@ export interface ProfileView {
   lastName: string
   phone?: string | null
   institutionalEmail?: string | null
+  institutionalEmailVerifiedAt?: string | null
   accountStatus: string
   roles: RoleView[]
   createdAt: string
@@ -31,4 +32,16 @@ export const profileApi = {
   get: (accessToken: string) => request<ProfileView>('/profile', { token: accessToken }),
   update: (accessToken: string, update: ProfileUpdate) =>
     request<ProfileView>('/profile', { method: 'PATCH', body: update, token: accessToken }),
+  changeEmail: (accessToken: string, newEmail: string, password: string) =>
+    request<Message>('/profile/change-email', { method: 'POST', body: { newEmail, password }, token: accessToken }),
+  verifyEmailChange: (accessToken: string, code: string) =>
+    request<Message>('/profile/verify-email-change', { method: 'POST', body: { code }, token: accessToken }),
+  setInstitutionalEmail: (accessToken: string, institutionalEmail: string) =>
+    request<Message>('/profile/set-institutional-email', { method: 'POST', body: { institutionalEmail }, token: accessToken }),
+  verifyInstitutionalEmail: (accessToken: string, code: string) =>
+    request<Message>('/profile/verify-institutional-email', { method: 'POST', body: { code }, token: accessToken }),
+}
+
+interface Message {
+  message: string
 }
