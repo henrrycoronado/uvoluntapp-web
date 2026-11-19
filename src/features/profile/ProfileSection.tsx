@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from 'react'
+import { activeRolesByRank, roleLabels } from '../../shared/session/roles'
 import { useTheme } from '../../shared/theme/theme'
 import { Button, TextField } from '../../shared/ui'
 import { logout } from '../auth/logout'
@@ -11,11 +12,6 @@ const statusLabels: Record<string, string> = {
   PENDING_APPROVAL: 'Pendiente de aprobación',
   SUSPENDED: 'Suspendida',
   REJECTED: 'Rechazada',
-}
-const roleLabels: Record<string, string> = {
-  ADMIN: 'Administrador',
-  PROGRAM_LEADER: 'Líder de programa',
-  OPERATIONAL_LEADER: 'Líder operativo',
 }
 
 interface ProfileSectionProps {
@@ -30,7 +26,7 @@ export function ProfileSection({ token, profile, onSaved }: ProfileSectionProps)
   const [form, setForm] = useState({ firstName: profile.firstName, lastName: profile.lastName, phone: profile.phone ?? '' })
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
   const [saving, setSaving] = useState(false)
-  const activeRoles = profile.roles.filter((r) => !r.revokedAt)
+  const activeRoles = activeRolesByRank(profile.roles)
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

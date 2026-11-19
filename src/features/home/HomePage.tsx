@@ -33,7 +33,7 @@ export function HomePage() {
       onSelect={select}
       switchAction={user.can.canOpenConsole ? { label: 'Consola Uvoluntapp', onClick: () => navigate('/consola') } : undefined}
     >
-      {section === 'inicio' && <OverviewSection profile={user.profile} />}
+      {section === 'inicio' && <OverviewSection token={token} profile={user.profile} onOpen={select} />}
       {section === 'programas' && <ProgramsSection token={token} reviewer={user.can.canOpenConsole} />}
       {section === 'actividades' && <ActivitiesSection token={token} />}
       {section === 'registros' && <RecordsSection />}

@@ -14,7 +14,16 @@ export interface VerifyOtpResult {
   tokens?: Session
 }
 
+export interface GoogleAuthResult {
+  accountStatus: string
+  isNewAccount: boolean
+  tokens?: Session | null
+}
+
 export const authApi = {
+  google: (idToken: string) =>
+    request<GoogleAuthResult>('/auth/google', { method: 'POST', body: { idToken } }),
+
   register: (input: RegisterInput) =>
     request<{ message: string }>('/auth/register', { method: 'POST', body: input }),
 

@@ -1,6 +1,7 @@
 import { type FormEvent, useMemo, useState } from 'react'
 import type { ProfileView } from '../../profile/api'
 import type { Capabilities } from '../../../shared/session/capabilities'
+import { activeRolesByRank } from '../../../shared/session/roles'
 import { Button, ConfirmButton } from '../../../shared/ui'
 import type { Access } from '../access'
 import { consoleApi, type NewRoleAssignment, type Program, type RoleAssignment, type UserSummary } from '../api'
@@ -45,7 +46,7 @@ function OwnRoles({ profile }: { profile: ProfileView }) {
     <div className={styles.panel}>
       <p className={styles.muted}>Como líder operativo puedes revisar tus roles. La gestión la hacen el ADMIN y el líder de programa.</p>
       <ul>
-        {profile.roles.map((r) => (
+        {activeRolesByRank(profile.roles).map((r) => (
           <li key={r.id}>{roleLabels[r.role] ?? r.role} · {r.scope === 'GLOBAL' ? 'Sin programa asignado' : 'Programa'}</li>
         ))}
       </ul>

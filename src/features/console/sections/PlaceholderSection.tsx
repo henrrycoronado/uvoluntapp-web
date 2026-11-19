@@ -1,15 +1,23 @@
-import type { SectionDefinition } from '../access'
+import type { VisibleSection } from '../access'
 import styles from '../console.module.css'
 
-/** Sección reservada: ya tiene su lugar y sus permisos; el contenido llega con su módulo. */
-export function PlaceholderSection({ section, canEdit }: { section: SectionDefinition; canEdit: boolean }) {
+/** Sección que llega con un módulo posterior: explica qué podrá hacer la persona con su rol. */
+export function PlaceholderSection({ section }: { section: VisibleSection }) {
+  const plans = section.plans
+  const items = plans ? (section.level === 'edit' ? [...plans.edit, ...plans.review] : plans.review) : []
   return (
-    <div className={styles.empty}>
-      <p className={styles.muted}>{section.summary}</p>
-      <p className={styles.muted}>
-        Este espacio se habilita con el {section.module.toLowerCase()}.{' '}
-        {canEdit ? 'Cuando esté listo, podrás gestionarlo desde aquí.' : 'Cuando esté listo, podrás consultarlo desde aquí.'}
-      </p>
+    <div className={styles.panel}>
+      <h2 className={styles.subheading}>Lo que podrás hacer aquí</h2>
+      {items.length > 0 ? (
+        <ul className={styles.planList}>
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className={styles.muted}>Esta sección se define con su módulo.</p>
+      )}
+      <p className={styles.muted}>Disponible con el {section.module?.toLowerCase() ?? 'próximo módulo'}. Por ahora no hay datos que mostrar.</p>
     </div>
   )
 }

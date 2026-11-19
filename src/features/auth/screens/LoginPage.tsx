@@ -1,8 +1,9 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useCallback, useState } from 'react'
 import { navigate } from '../../../app/navigation'
 import { ApiError } from '../../../shared/api/http'
 import { Button, TextField } from '../../../shared/ui'
 import { AuthLayout } from '../AuthLayout'
+import { GoogleButton } from '../GoogleButton'
 import { authApi } from '../api'
 import styles from '../auth.module.css'
 import { writeSession } from '../session'
@@ -12,6 +13,26 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  const onGoogle = useCallback(async (idToken: string) => {
+    setError(null)
+    setNotice(null)
+    try {
+      const result = await authApi.google(idToken)
+      if (result.tokens) {
+        writeSession(result.tokens)
+        navigate('/inicio')
+      } else if (result.accountStatus === 'PENDING_APPROVAL') {
+        setNotice('Tu cuenta de Google quedó registrada. Un administrador la revisará antes de que puedas entrar.')
+      } else {
+        setError('Tu cuenta no está activa. Contacta a la Pastoral.')
+      }
+    } catch (caught) {
+      setError(caught instanceof ApiError && caught.status === 400 ? 'Google no pudo verificar tu cuenta.' : loginMessage(caught))
+    }
+  }, [])
+  const onGoogleError = useCallback((message: string) => setError(message), [])
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -30,6 +51,11 @@ export function LoginPage() {
   return (
     <AuthLayout title="Iniciar sesión" description="Entra con tu correo y tu contraseña.">
       {error && <p role="alert" className={styles.alert}>{error}</p>}
+      {notice && <p role="status" className={styles.notice}>{notice}</p>}
+      <div className={styles.google}>
+        <GoogleButton onCredential={onGoogle} onError={onGoogleError} />
+      </div>
+      <p className={styles.divider}><span>o con tu correo</span></p>
       <form className={styles.form} onSubmit={onSubmit} noValidate>
         <TextField
           label="Correo"
