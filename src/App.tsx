@@ -1,15 +1,20 @@
-import { useState } from 'react'
-import { LoginScreen, OtpScreen, RegisterScreen } from './screens/Access'
+import { RegisterPage } from './features/auth/screens/RegisterPage'
+import { LoginPage } from './features/auth/screens/LoginPage'
+import { OtpPage } from './features/auth/screens/OtpPage'
+import { ProfilePage } from './features/profile/screens/ProfilePage'
+import { usePathname } from './app/navigation'
 
 export default function App() {
-  const [route, setRoute] = useState(window.location.pathname)
-  const [registration, setRegistration] = useState({ email: '', firstName: '', lastName: '' })
+  const pathname = usePathname()
 
-  if (route === '/register') {
-    return <RegisterScreen onRegistered={(value) => { setRegistration(value); setRoute('/verify-otp') }} />
+  switch (pathname) {
+    case '/registro':
+      return <RegisterPage />
+    case '/verificar':
+      return <OtpPage />
+    case '/perfil':
+      return <ProfilePage />
+    default:
+      return <LoginPage />
   }
-  if (route === '/verify-otp') {
-    return <OtpScreen {...registration} onVerified={() => setRoute('/login')} />
-  }
-  return <LoginScreen />
 }
