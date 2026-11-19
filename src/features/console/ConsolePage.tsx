@@ -1,7 +1,9 @@
-import { useState } from 'react'
-import { AppHeader } from '../../app/AppHeader'
+import { navigate } from '../../app/navigation'
+import { AppShell } from '../../shared/layout/AppShell'
+import { useSection } from '../../shared/layout/useSection'
 import { useCurrentUser } from '../../shared/session/useCurrentUser'
 import { AccessDenied } from '../../shared/ui'
+import { ProfileSection } from '../profile/ProfileSection'
 import { visibleSections } from './access'
 import styles from './console.module.css'
 import { AdminGrantsSection } from './sections/AdminGrantsSection'
@@ -11,58 +13,46 @@ import { PlaceholderSection } from './sections/PlaceholderSection'
 import { RolesSection } from './sections/RolesSection'
 import { UsersSection } from './sections/UsersSection'
 
-function initialSection(): string | null {
-  return new URLSearchParams(window.location.search).get('seccion')
-}
-
+/** Consola de gestión: secciones según el rol, con perfil propio en la barra lateral. */
 export function ConsolePage() {
-  const [user] = useCurrentUser()
-  const [selected, setSelected] = useState<string | null>(initialSection)
+  const [user, reloadUser] = useCurrentUser()
+  const sections = user.status === 'ready' ? visibleSections(user.can) : []
+  const [selected, select] = useSection('/consola', [...sections.map((s) => s.id), 'perfil'], sections[0]?.id ?? 'perfil')
 
-  if (user.status === 'loading') return <main className={styles.main}><p className={styles.muted}>Cargando consola…</p></main>
-  if (user.status === 'error') return <main className={styles.main}><p role="alert" className={styles.alert}>{user.message}</p></main>
+  if (user.status === 'loading') return <main className={styles.muted}>Cargando consola…</main>
+  if (user.status === 'error') return <main><p role="alert" className={styles.alert}>{user.message}</p></main>
 
   const { can, profile, session } = user
   if (!can.canOpenConsole) {
     return (
-      <>
-        <AppHeader showConsole={false} current="consola" />
-        <main className={styles.main}>
-          <AccessDenied />
-        </main>
-      </>
+      <main className={styles.main}>
+        <AccessDenied action={<button type="button" onClick={() => navigate('/inicio')}>Volver a mi espacio</button>} />
+      </main>
     )
   }
 
-  const sections = visibleSections(can)
-  const current = sections.find((s) => s.id === selected) ?? sections[0]
-  const choose = (id: string) => {
-    setSelected(id)
-    window.history.replaceState({}, '', `/consola?seccion=${id}`)
-  }
-  const ready = sections.filter((s) => s.module === 'Módulo 1')
-  const upcoming = sections.filter((s) => s.module !== 'Módulo 1')
+  const current = sections.find((s) => s.id === selected)
+  const groups = [
+    { label: 'Disponible', items: sections.filter((s) => s.module === 'Módulo 1').map((s) => ({ id: s.id, label: s.title })) },
+    { label: 'Próximamente', items: sections.filter((s) => s.module !== 'Módulo 1').map((s) => ({ id: s.id, label: s.title })) },
+  ]
+  const token = session.accessToken
 
   return (
-    <>
-      <AppHeader showConsole current="consola" />
-      <div className={styles.shell}>
-        <nav className={styles.sidebar} aria-label="Secciones de la consola">
-          <p className={styles.brand}>Consola</p>
-          <p className={styles.navGroup}>Disponible</p>
-          {ready.map((s) => (
-            <button key={s.id} type="button" className={s.id === current.id ? styles.navItemActive : styles.navItem} onClick={() => choose(s.id)} aria-current={s.id === current.id ? 'page' : undefined}>
-              {s.title}
-            </button>
-          ))}
-          <p className={styles.navGroup}>Próximamente</p>
-          {upcoming.map((s) => (
-            <button key={s.id} type="button" className={s.id === current.id ? styles.navItemActive : styles.navItem} onClick={() => choose(s.id)} aria-current={s.id === current.id ? 'page' : undefined}>
-              {s.title}
-            </button>
-          ))}
-        </nav>
-        <main className={styles.main}>
+    <AppShell
+      area="Consola"
+      groups={groups}
+      active={selected}
+      onSelect={select}
+      switchAction={{ label: 'Volver a mi espacio', onClick: () => navigate('/inicio') }}
+    >
+      {selected === 'perfil' || !current ? (
+        <>
+          <h1 className={styles.heading}>Perfil</h1>
+          <ProfileSection token={token} profile={profile} onSaved={reloadUser} />
+        </>
+      ) : (
+        <>
           <div className={styles.topbar}>
             <div>
               <h1 className={styles.heading}>{current.title}</h1>
@@ -72,14 +62,14 @@ export function ConsolePage() {
               {current.level === 'edit' ? 'Puedes gestionar' : 'Solo consulta'}
             </span>
           </div>
-          {current.id === 'usuarios' && <UsersSection token={session.accessToken} access={current.level} />}
-          {current.id === 'aprobaciones' && <ApprovalsSection token={session.accessToken} />}
-          {current.id === 'asignaciones' && <RolesSection token={session.accessToken} access={current.level} can={can} profile={profile} />}
-          {current.id === 'administradores' && <AdminGrantsSection token={session.accessToken} selfId={profile.id} />}
-          {current.id === 'auditoria' && <AuditSection token={session.accessToken} />}
+          {current.id === 'usuarios' && <UsersSection token={token} access={current.level} />}
+          {current.id === 'aprobaciones' && <ApprovalsSection token={token} />}
+          {current.id === 'asignaciones' && <RolesSection token={token} access={current.level} can={can} profile={profile} />}
+          {current.id === 'administradores' && <AdminGrantsSection token={token} selfId={profile.id} />}
+          {current.id === 'auditoria' && <AuditSection token={token} />}
           {current.module !== 'Módulo 1' && <PlaceholderSection section={current} canEdit={current.level === 'edit'} />}
-        </main>
-      </div>
-    </>
+        </>
+      )}
+    </AppShell>
   )
 }

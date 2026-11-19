@@ -1,4 +1,5 @@
-# Prueba de navegador de inicio de sesión, inicio y cierre de sesión. Requiere API en :5207, web en :5173 y DEV_ADMIN_1_* en el entorno.
+# Prueba de navegador: landing, acceso, espacio general, perfil y cierre de sesión.
+# Requiere API en :5207, web en :5173 y DEV_ADMIN_1_* en el entorno.
 import os
 import sys
 from playwright.sync_api import expect, sync_playwright
@@ -15,20 +16,27 @@ def check(name, cond):
 with sync_playwright() as p:
     browser = p.chromium.launch(executable_path="/usr/bin/google-chrome", headless=True, args=["--no-sandbox"])
     page = browser.new_page(viewport={"width": 1280, "height": 800})
-    page.goto(WEB + "/acceso")
+    page.goto(WEB + "/")
+    expect(page.get_by_role("button", name="Empezar")).to_be_visible(timeout=10000)
+    check("landing pública con botón Empezar", True)
+    page.get_by_role("button", name="Empezar").click()
     expect(page.get_by_role("heading", name="Iniciar sesión")).to_be_visible(timeout=10000)
-    check("pantalla de inicio de sesión", True)
+    check("Empezar sin sesión lleva al acceso", True)
     page.get_by_label("Correo").fill(os.environ["DEV_ADMIN_1_EMAIL"])
     page.get_by_label("Contraseña").fill(os.environ["DEV_ADMIN_1_PASSWORD"])
     page.get_by_role("button", name="Entrar").click()
     expect(page.get_by_text("Hola, Admin1.")).to_be_visible(timeout=15000)
-    check("redirige al inicio con el saludo del usuario", True)
+    check("entra al espacio general", True)
+    check("sin barra superior", page.locator("header").count() == 0)
+    page.get_by_role("button", name="Perfil").click()
+    expect(page.get_by_role("heading", name="Mis datos")).to_be_visible(timeout=10000)
+    check("perfil desde la barra lateral", True)
     page.get_by_role("button", name="Cerrar sesión").click()
     expect(page.get_by_role("heading", name="Iniciar sesión")).to_be_visible(timeout=10000)
-    check("cerrar sesión vuelve al inicio de sesión", True)
+    check("cerrar sesión desde el perfil", True)
     page.goto(WEB + "/inicio")
     expect(page.get_by_role("heading", name="Iniciar sesión")).to_be_visible(timeout=10000)
-    check("el inicio sin sesión redirige al inicio de sesión", True)
+    check("espacio general sin sesión redirige al acceso", True)
     page.get_by_label("Correo").fill(os.environ["DEV_ADMIN_1_EMAIL"])
     page.get_by_label("Contraseña").fill("clave-incorrecta")
     page.get_by_role("button", name="Entrar").click()

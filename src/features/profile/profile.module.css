@@ -1,0 +1,90 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.card {
+  background: var(--color-bg-raised);
+  border-radius: 16px;
+  padding: var(--space-6);
+  display: grid;
+  gap: var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 650;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.facts dd {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.themeRow {
+  display: inline-flex;
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 3px;
+  justify-self: start;
+}
+
+.option {
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-4);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.optionActive {
+  composes: option;
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  font-weight: 600;
+}
+
+.alert {
+  margin: 0;
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border-radius: 10px;
+  padding: var(--space-3) var(--space-4);
+}
+
+.success {
+  margin: 0;
+  background: var(--color-bg-surface);
+  border-left: 3px solid var(--color-accent);
+  border-radius: 10px;
+  padding: var(--space-3) var(--space-4);
+}
+
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

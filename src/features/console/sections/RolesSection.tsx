@@ -27,6 +27,15 @@ export function RolesSection({ token, access, can, profile }: RolesSectionProps)
   if (access === 'review') {
     return <OwnRoles profile={profile} />
   }
+  if (!can.isAdmin && can.ledProgramIds.length === 0) {
+    return (
+      <div className={styles.panel}>
+        <p className={styles.muted}>
+          Eres líder de programa, pero todavía no tienes programas asignados. Cuando un administrador te asigne uno, aquí podrás gestionar sus líderes operativos.
+        </p>
+      </div>
+    )
+  }
   return <ManageRoles token={token} can={can} />
 }
 
