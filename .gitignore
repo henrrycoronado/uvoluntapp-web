@@ -22,3 +22,8 @@ Thumbs.db
 
 # generated api client (regenerate with npm run gen:api)
 src/api/generated/
+
+# Archivos locales de agentes y scripts e2e: no se versionan (gen-api sí, lo usa npm run gen:api)
+CLAUDE.md
+AGENTS.md
+scripts/e2e/
