@@ -3,31 +3,42 @@ import { navigate } from '../../../app/navigation'
 import { ApiError } from '../../../shared/api/http'
 import { Button, TextField } from '../../../shared/ui'
 import { AuthLayout } from '../AuthLayout'
+import { ResendCode } from '../ResendCode'
 import { authApi } from '../api'
 import styles from '../auth.module.css'
+import { commonMessage } from '../messages'
 import { readPendingEmail, writeSession } from '../session'
+import { codeError } from '../validation'
 
 export function OtpPage() {
   const email = readPendingEmail()
   const [code, setCode] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [pendingApproval, setPendingApproval] = useState(false)
+  const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setError(null)
+    setMessage(null)
+    if (codeError(code)) {
+      setMessage({ kind: 'error', text: 'Escribe los 6 dígitos del código.' })
+      return
+    }
     setSubmitting(true)
     try {
-      const result = await authApi.verifyOtp(email, code.trim())
+      const result = await authApi.verifyOtp(email, code)
       if (result.tokens) {
         writeSession(result.tokens)
         navigate('/inicio')
+      } else if (result.requiresApprovalData) {
+        navigate('/completar-registro')
       } else {
-        setPendingApproval(true)
+        navigate('/en-revision')
       }
     } catch (caught) {
-      setError(otpMessage(caught))
+      setMessage({
+        kind: 'error',
+        text: caught instanceof ApiError && caught.status === 422 ? 'El código es incorrecto o ya venció. Revisa tu correo o pide otro.' : commonMessage(caught),
+      })
     } finally {
       setSubmitting(false)
     }
@@ -42,28 +53,26 @@ export function OtpPage() {
     )
   }
 
-  if (pendingApproval) {
-    return (
-      <AuthLayout title="Cuenta en revisión">
-        <p className={styles.notice}>
-          Tu correo está verificado. Un administrador revisará tu solicitud y te avisaremos cuando esté lista.
-        </p>
-        <Button variant="secondary" onClick={() => navigate('/acceso')}>Volver al inicio de sesión</Button>
-      </AuthLayout>
-    )
-  }
-
   return (
-    <AuthLayout title="Verifica tu correo" description={`Enviamos un código de 6 dígitos a ${email}.`}>
-      {error && <p role="alert" className={styles.alert}>{error}</p>}
+    <AuthLayout title="Verifica tu correo" description="Escribe el código de 6 dígitos que enviamos a tu correo. Vence en 10 minutos.">
+      <p className={styles.description}>
+        Correo: <span className={styles.email}>{email}</span>
+      </p>
+      {message && (
+        <p role={message.kind === 'error' ? 'alert' : 'status'} className={message.kind === 'error' ? styles.alert : styles.success}>
+          {message.text}
+        </p>
+      )}
       <form className={styles.form} onSubmit={onSubmit} noValidate>
         <TextField
           label="Código"
+          name="code"
           inputMode="numeric"
           autoComplete="one-time-code"
           maxLength={6}
           value={code}
           onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+          autoFocus
           required
         />
         <div className={styles.actions}>
@@ -72,13 +81,13 @@ export function OtpPage() {
           </Button>
         </div>
       </form>
+      <ResendCode send={() => authApi.resendOtp(email)} onMessage={setMessage} />
+      <p className={styles.footnote}>
+        ¿Te equivocaste de correo?{' '}
+        <button type="button" className={styles.link} onClick={() => navigate('/registro')}>
+          Volver al registro
+        </button>
+      </p>
     </AuthLayout>
   )
-}
-
-function otpMessage(caught: unknown): string {
-  if (!(caught instanceof ApiError)) return 'No pudimos conectar con el servidor. Intenta de nuevo.'
-  if (caught.status === 422) return 'El código es inválido o ya venció. Revisa tu correo.'
-  if (caught.status === 429) return 'Demasiados intentos. Espera unos minutos.'
-  return caught.problem.title
 }
