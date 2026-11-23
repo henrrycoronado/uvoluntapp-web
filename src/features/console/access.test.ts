@@ -6,6 +6,14 @@ const base: Capabilities = { isAdmin: false, isProgramLeader: false, isOperation
 const levels = (can: Capabilities) => Object.fromEntries(visibleSections(can).map((s) => [s.id, s.level]))
 
 describe('matriz de acceso de la consola', () => {
+  it('periodos es solo del ADMIN e inscripciones está activa para quien gestiona', () => {
+    const admin = visibleSections({ ...base, isAdmin: true })
+    expect(admin.find((s) => s.id === 'periodos')).toMatchObject({ level: 'edit', live: true })
+    expect(admin.find((s) => s.id === 'inscripciones')).toMatchObject({ level: 'edit', live: true })
+    expect(levels({ ...base, isProgramLeader: true, ledProgramIds: ['p1'] }).periodos).toBeUndefined()
+    expect(levels({ ...base, isOperationalLeader: true }).inscripciones).toBe('review')
+  })
+
   it('el ADMIN gestiona todo y revisa la auditoría', () => {
     const admin = levels({ ...base, isAdmin: true })
     expect(admin.usuarios).toBe('edit')

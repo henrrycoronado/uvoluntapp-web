@@ -98,16 +98,19 @@ export const sections: SectionDefinition[] = [
     access: managersEditOperativeReviews,
   },
   {
+    id: 'periodos',
+    title: 'Periodos',
+    summary: 'Periodo académico activo, cierre y apertura del siguiente.',
+    feature: 'Programas',
+    live: true,
+    access: (can) => (can.isAdmin ? 'edit' : 'none'),
+  },
+  {
     id: 'inscripciones',
     title: 'Inscripciones',
-    summary: 'Solicitudes de participación en actividades.',
+    summary: 'Inscritos por actividad y por turno.',
     feature: 'Participación',
-    live: false,
-    module: 'Módulo 3',
-    plans: {
-      edit: ['Aprobar o rechazar inscripciones', 'Gestionar listas de espera y cupos'],
-      review: ['Consultar inscritos por actividad'],
-    },
+    live: true,
     access: managersEditOperativeReviews,
   },
   {

@@ -10,7 +10,9 @@ import { ActivitiesSection } from './sections/ActivitiesSection'
 import { AdminGrantsSection } from './sections/AdminGrantsSection'
 import { ApprovalsSection } from './sections/ApprovalsSection'
 import { AuditSection } from './sections/AuditSection'
+import { EnrollmentsSection } from './sections/EnrollmentsSection'
 import { OverviewSection } from './sections/OverviewSection'
+import { PeriodsSection } from './sections/PeriodsSection'
 import { PlaceholderSection } from './sections/PlaceholderSection'
 import { ProgramsSection } from './sections/ProgramsSection'
 import { RolesSection } from './sections/RolesSection'
@@ -64,6 +66,8 @@ export function ConsolePage() {
           {current.id === 'programas' && <ProgramsSection token={token} can={can} />}
           {current.id === 'actividades' && <ActivitiesSection token={token} can={can} access={current.level} />}
           {current.id === 'agregacion' && <TeamSection token={token} can={can} access={current.level} />}
+          {current.id === 'periodos' && <PeriodsSection token={token} />}
+          {current.id === 'inscripciones' && <EnrollmentsSection token={token} />}
           {!current.live && <PlaceholderSection section={current} />}
         </>
       )}
