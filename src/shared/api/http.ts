@@ -27,6 +27,9 @@ interface RequestOptions {
   token?: string
 }
 
+/** Cuerpo multipart (por ejemplo, la carga de una imagen). */
+export const isForm = (body: unknown): body is FormData => typeof FormData !== 'undefined' && body instanceof FormData
+
 /** Recibe el token rechazado y devuelve uno vigente, o null si la sesión ya no se puede renovar. */
 type TokenRefresher = (rejectedToken: string) => Promise<string | null>
 
@@ -39,7 +42,8 @@ export function setTokenRefresher(fn: TokenRefresher | null): void {
 
 async function send(path: string, options: RequestOptions, token?: string): Promise<Response> {
   const headers: Record<string, string> = { Accept: 'application/json' }
-  if (options.body !== undefined) headers['Content-Type'] = 'application/json'
+  // Con FormData el navegador fija el Content-Type con su boundary.
+  if (options.body !== undefined && !isForm(options.body)) headers['Content-Type'] = 'application/json'
   if (token) headers.Authorization = `Bearer ${token}`
 
   // credentials: la cookie de prueba del registro debe llegar a complete-registration.
@@ -47,7 +51,7 @@ async function send(path: string, options: RequestOptions, token?: string): Prom
     method: options.method ?? 'GET',
     headers,
     credentials: 'include',
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body: options.body === undefined ? undefined : isForm(options.body) ? options.body : JSON.stringify(options.body),
   })
 }
 

@@ -3,14 +3,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { ActivityForm, type ActivityDraft, validateDraft } from './ActivityForm'
 import type { Activity, Period, PlanningProgram } from './api'
 
-const periods: Period[] = [{ id: 'per1', label: '2026-2', startDate: '2026-08-01T00:00:00Z', endDate: '2026-12-15T00:00:00Z' }]
+const period: Period = { id: 'per1', label: '2026-2', startDate: '2026-08-01T00:00:00Z', endDate: null, status: 'ACTIVE' }
 const programs: PlanningProgram[] = [
   { id: 'p1', name: 'Comunitario', status: 'ACTIVE', createdAt: '2026-11-01T00:00:00Z', canManage: true },
 ]
 
 const draft = (over: Partial<ActivityDraft> = {}): ActivityDraft => ({
   programId: 'p1',
-  periodId: 'per1',
   title: 'Visita',
   description: '',
   modality: 'IN_PERSON',
@@ -22,13 +21,12 @@ const draft = (over: Partial<ActivityDraft> = {}): ActivityDraft => ({
   capacity: '',
   expectedHours: '',
   participationConditions: '',
-  periodicityNote: '',
   groupLabel: '',
   ...over,
 })
 
 const renderForm = (props: Partial<Parameters<typeof ActivityForm>[0]> = {}) =>
-  render(<ActivityForm programs={programs} canCreateFree={false} periods={periods} onSubmit={vi.fn()} onCancel={vi.fn()} {...props} />)
+  render(<ActivityForm programs={programs} canCreateFree={false} activePeriod={period} onSubmit={vi.fn()} onCancel={vi.fn()} {...props} />)
 
 describe('ActivityForm', () => {
   it('el cupo solo se habilita con registro previo y se borra al desmarcarlo', () => {
@@ -76,8 +74,8 @@ describe('ActivityForm', () => {
     const published = {
       id: 'a1', programId: 'p1', periodId: 'per1', status: 'PUBLISHED', title: 'Visita', description: null, modality: 'IN_PERSON',
       location: 'Plaza', meetingUrl: null, startsAt: '2026-11-22T13:00:00Z', endsAt: '2026-11-22T15:00:00Z', requiresRegistration: true,
-      capacity: 10, expectedHours: null, participationConditions: null, periodicityNote: null, groupLabel: null,
-      createdAt: '2026-11-01T00:00:00Z', canManage: true, canMove: false,
+      capacity: 10, expectedHours: null, participationConditions: null, participation: { groups: [], allowMultipleGroups: false, latitude: null, longitude: null, geofenceRadiusM: null, allowSelfCheckin: false, checkinToleranceMin: 0 }, groupLabel: null,
+      createdAt: '2026-11-01T00:00:00Z', canManage: true,
     } satisfies Activity
     renderForm({ activity: published })
     expect(screen.getByLabelText('Título')).toBeDisabled()
@@ -96,7 +94,7 @@ describe('ActivityForm', () => {
     expect(validateDraft(draft({ modality: 'VIRTUAL', meetingUrl: 'zoom' })).meetingUrl).toMatch(/válida/)
     expect(validateDraft(draft({ requiresRegistration: true, capacity: '0' })).capacity).toBeDefined()
     expect(validateDraft(draft({ expectedHours: '1001' })).expectedHours).toBeDefined()
-    expect(validateDraft(draft({ startsAt: '2027-01-10T09:00', endsAt: '2027-01-10T10:00' }), undefined, periods[0]).startsAt).toMatch(/2026-2/)
+    expect(validateDraft(draft({ startsAt: '2026-07-10T09:00', endsAt: '2026-07-10T10:00' }), undefined, period).startsAt).toMatch(/2026-2/)
   })
 
   it('no envía si hay errores y envía la configuración limpia si es válida', async () => {

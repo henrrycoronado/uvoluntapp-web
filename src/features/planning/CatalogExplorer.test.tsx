@@ -11,7 +11,7 @@ describe('catálogo público', () => {
     const activity = {
       id: 'a1', programId: null, programName: null, periodId: 'per1', status: 'PUBLISHED', title: 'Colecta', description: null,
       modality: 'IN_PERSON', location: 'Campus', startsAt: '2026-11-22T13:00:00Z', endsAt: '2026-11-22T15:00:00Z',
-      requiresRegistration: false, capacity: null, expectedHours: null, participationConditions: null, periodicityNote: null, groupLabel: 'Navidad',
+      requiresRegistration: false, capacity: null, expectedHours: null, participationConditions: null, participation: { groups: [], allowMultipleGroups: false, latitude: null, longitude: null, geofenceRadiusM: null, allowSelfCheckin: false, checkinToleranceMin: 0 }, groupLabel: 'Navidad',
     }
     const fetchMock = vi.fn(async (url: string) =>
       new Response(JSON.stringify(String(url).includes('/catalog/activities') ? page([activity]) : String(url).includes('/catalog/periods') ? [] : page([]))),

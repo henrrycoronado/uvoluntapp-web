@@ -56,7 +56,7 @@ export function ActivityDetail({ token, activity: a, can, programs, periods, onC
           activity={a}
           programs={programs.filter((p) => p.canManage)}
           canCreateFree={can.isAdmin}
-          periods={periods}
+          activePeriod={period}
           onCancel={() => setEditing(false)}
           checkConflicts={({ plan }) =>
             planningApi.activities
@@ -77,7 +77,6 @@ export function ActivityDetail({ token, activity: a, can, programs, periods, onC
               <dd>{a.requiresRegistration ? `Sí · ${a.capacity ? `cupo ${a.capacity}` : 'sin límite de cupo'}` : 'No'}</dd>
             </div>
             {a.expectedHours != null && <div><dt>Horas previstas</dt><dd>{a.expectedHours} h</dd></div>}
-            {a.periodicityNote && <div><dt>Periodicidad</dt><dd>{a.periodicityNote}</dd></div>}
             {a.participationConditions && <div><dt>Condiciones</dt><dd>{a.participationConditions}</dd></div>}
             {a.cancellationReason && <div><dt>Motivo de cancelación</dt><dd>{a.cancellationReason}</dd></div>}
           </dl>
@@ -127,7 +126,6 @@ export function ActivityDetail({ token, activity: a, can, programs, periods, onC
 
       {manage && a.status === 'PUBLISHED' && !editing && <RescheduleForm key={`form-${a.startsAt}`} token={token} activity={a} onDone={onChanged} report={run} />}
       <RescheduleHistory key={`history-${a.startsAt}`} token={token} activityId={a.id} />
-      {a.canMove && !editing && <MoveForm token={token} activity={a} programs={programs} onDone={onChanged} />}
       {manage && <Delegations key={a.programId ?? 'libre'} token={token} activity={a} can={can} />}
     </section>
   )
@@ -231,42 +229,6 @@ function RescheduleHistory({ token, activityId }: { token: string; activityId: s
           </li>
         ))}
       </ul>
-    </div>
-  )
-}
-
-/** Mover a otro programa o volverla libre (SCRUM-123). Solo ADMIN; revoca las asignaciones sobre la actividad. */
-function MoveForm({ token, activity, programs, onDone }: { token: string; activity: Activity; programs: PlanningProgram[]; onDone: () => void }) {
-  const destinations = programs.filter((p) => !p.archivedAt && p.id !== activity.programId)
-  const [target, setTarget] = useState('')
-  const { message, run } = useAction()
-  const FREE = '__libre__'
-
-  return (
-    <div className={planning.fieldset} role="group" aria-label="Mover actividad">
-      <h3 className={planning.groupTitle}>Mover actividad</h3>
-      <p className={styles.muted}>Las delegaciones y líderes asignados a esta actividad se revocan al moverla.</p>
-      <div className={styles.actions}>
-        <Field label="Destino">
-          {(id) => (
-            <select id={id} className={styles.select} value={target} onChange={(e) => setTarget(e.target.value)}>
-              <option value="">Elige un destino</option>
-              {activity.programId && <option value={FREE}>Actividad libre (sin programa)</option>}
-              {destinations.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          )}
-        </Field>
-        {target && (
-          <ReasonAction
-            label="Mover"
-            confirmLabel="Confirmar cambio"
-            onConfirm={(reason) =>
-              run(() => planningApi.activities.move(token, activity.id, target === FREE ? null : target, reason), 'Actividad movida.', () => { setTarget(''); onDone() })
-            }
-          />
-        )}
-      </div>
-      <Feedback message={message} />
     </div>
   )
 }

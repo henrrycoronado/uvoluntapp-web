@@ -171,7 +171,6 @@ export function CatalogActivities({ initialProgramId }: { initialProgramId?: str
                           <div><dt>Modalidad</dt><dd>{modalityLabels[a.modality]}</dd></div>
                           {a.expectedHours != null && <div><dt>Horas previstas</dt><dd>{a.expectedHours} h (informativas)</dd></div>}
                           {a.participationConditions && <div><dt>Condiciones</dt><dd>{a.participationConditions}</dd></div>}
-                          {a.periodicityNote && <div><dt>Periodicidad</dt><dd>{a.periodicityNote}</dd></div>}
                         </dl>
                       </span>
                     )}

@@ -10,8 +10,8 @@ const base: Capabilities = { isAdmin: false, isProgramLeader: false, isOperation
 const activity = (over: Record<string, unknown>) => ({
   id: 'a1', programId: 'p1', programName: 'Comunitario', periodId: 'per1', status: 'DRAFT', title: 'Visita', description: null,
   modality: 'IN_PERSON', location: 'Plaza', meetingUrl: null, startsAt: '2026-11-22T13:00:00Z', endsAt: '2026-11-22T15:00:00Z',
-  requiresRegistration: false, capacity: null, expectedHours: null, participationConditions: null, periodicityNote: null, groupLabel: null,
-  createdAt: '2026-11-01T00:00:00Z', canManage: false, canMove: false, ...over,
+  requiresRegistration: false, capacity: null, expectedHours: null, participationConditions: null, participation: { groups: [], allowMultipleGroups: false, latitude: null, longitude: null, geofenceRadiusM: null, allowSelfCheckin: false, checkinToleranceMin: 0 }, groupLabel: null,
+  createdAt: '2026-11-01T00:00:00Z', canManage: false, ...over,
 })
 
 function stub(activities: unknown[], programs: unknown[]) {
@@ -40,14 +40,13 @@ describe('ActivitiesSection', () => {
     expect(screen.getByRole('button', { name: 'Nueva actividad' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Editar' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Publicar' })).toBeInTheDocument()
-    expect(screen.queryByRole('group', { name: 'Mover actividad' })).toBeNull()
   })
 
-  it('el ADMIN puede mover la actividad', async () => {
-    stub([activity({ canManage: true, canMove: true, status: 'PUBLISHED' })], [program(true)])
+  it('el ADMIN puede reprogramar una actividad publicada', async () => {
+    stub([activity({ canManage: true, status: 'PUBLISHED' })], [program(true)])
     render(<ActivitiesSection token="t" can={{ ...base, isAdmin: true }} access="edit" />)
     await userEvent.click(await screen.findByRole('button', { name: /Visita/ }))
-    expect(screen.getByRole('group', { name: 'Mover actividad' })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Mover actividad' })).toBeNull()
     expect(screen.getByRole('group', { name: 'Reprogramar' })).toBeInTheDocument()
   })
 

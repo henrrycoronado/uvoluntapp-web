@@ -5,9 +5,12 @@ info:
     API central de Uvoluntapp — sistema de la Pastoral Universitaria UCB Santa Cruz
     para programas y actividades de voluntariado.
 
-    Este contrato cubre M1 (cuentas, sesión y roles) y M2 (periodos, programas y actividades).
-    Versión v1 congelada al cierre del bloque 1; después solo cambios aditivos.
-  version: 1.0.0-draft
+    La consola crea un programa en borrador y lo activa. Al crear una actividad, la API asigna el periodo
+    activo. La consola configura sus grupos en /activities/{activityId}/participation antes de publicarla.
+    El catálogo y el calendario comparten /catalog/activities. Una cuenta activa puede elegir una actividad
+    o grupo e inscribirse. /me/enrollments devuelve las inscripciones de la sesión, incluidas las canceladas.
+    La inscripción no crea asistencia ni horas. Las fechas de las actividades incluyen zona horaria.
+  version: 1.1.0-draft
   license:
     name: Proprietary
   contact:
@@ -38,8 +41,6 @@ tags:
     description: Periodos académicos (SCRUM-46)
   - name: Programs
     description: Programas de voluntariado (SCRUM-45, 103)
-  - name: ProgramPeriods
-    description: Vinculación de programas a periodos académicos
   - name: Activities
     description: Actividades de voluntariado (SCRUM-47, 48, 49, 50, 53)
   - name: ActivityReschedules
@@ -63,6 +64,9 @@ paths:
         Acepta correo institucional (`@ucb.edu.bo`) o externo.
         Envía OTP de 6 dígitos al correo (válido 10 min, máx 5 intentos).
         Respuesta no reveladora sobre existencia del correo.
+        Una cuenta PRE_REGISTERED (importación histórica) se reclama conservando su perfil.
+        Si el correo es de una cuenta creada con Google sin contraseña, el correo lleva el
+        código para /auth/set-password en lugar del OTP de registro.
         SCRUM-55.
       operationId: register
       security: []
@@ -156,6 +160,8 @@ paths:
         Devuelve JWT de acceso y refresh token.
         5 intentos por minuto por IP y por correo (Redis).
         Los fallos suman al bloqueo de Identity.
+        Con contraseña correcta y cuenta no activa responde 422 `urn:uvoluntapp:inactive-account`
+        con `accountStatus` y, si fue rechazada, `rejectionReason` y `reapplyAvailableAt`.
         SCRUM-56.
       operationId: login
       security: []
@@ -176,6 +182,72 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/reapply:
+    post:
+      tags: [Auth]
+      summary: Enviar una nueva solicitud tras un rechazo
+      description: |
+        La contraseña prueba la titularidad. Solo una cuenta REJECTED, 12 horas después del rechazo;
+        antes responde 422 `urn:uvoluntapp:reapply-too-early` con `reapplyAvailableAt`.
+        La solicitud anterior se conserva como historial y la cuenta vuelve a PENDING_APPROVAL.
+        SCRUM-108.
+      operationId: reapply
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReapplyRequest'
+      responses:
+        '200':
+          description: Solicitud enviada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/set-password:
+    post:
+      tags: [Auth]
+      summary: Crear la primera contraseña de una cuenta creada con Google
+      description: |
+        Verifica el OTP enviado por /auth/login (5 intentos) y crea la contraseña.
+        El código no se puede reutilizar. Solo una cuenta ACTIVE abre sesión;
+        una PENDING_APPROVAL responde sin tokens.
+        SCRUM-104.
+      operationId: setPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetPasswordRequest'
+      responses:
+        '200':
+          description: Contraseña creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetPasswordResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
         '429':
@@ -234,7 +306,11 @@ paths:
         Valida el token de Google, la audiencia y `email_verified`.
         Si el correo pertenece a una cuenta, se vincula solo con ambos verificados.
         Primer ingreso externo → PENDING_APPROVAL.
-        Correo con `hd = ucb.edu.bo` se trata como institucional.
+        Para el alta institucional se comprueban el dominio del correo y hd. Si faltan datos,
+        requiresProfileData indica que el cliente debe completar nombres, apellidos y teléfono.
+        Una cuenta externa sin solicitud de aprobación recibe `requiresApprovalData`,
+        los nombres de Google y la cookie `RegistrationProof`; el cliente sigue en
+        /auth/complete-registration.
         La API acepta la lista de IDs de cliente configurada.
         SCRUM-104.
       operationId: googleAuth
@@ -264,7 +340,7 @@ paths:
       tags: [Auth]
       summary: Solicitar enlace de recuperación de contraseña
       description: |
-        Envía enlace de un solo uso válido 30 min.
+        Envía un enlace a la web (`WEB_BASE_URL/restablecer?token=...`) de un solo uso, válido 30 min.
         Respuesta no reveladora. Límites por cuenta e IP.
         SCRUM-105.
       operationId: forgotPassword
@@ -290,7 +366,7 @@ paths:
       tags: [Auth]
       summary: Restablecer contraseña con token de recuperación
       description: |
-        Token de un solo uso, válido 30 min.
+        Token de un solo uso, válido 30 min. Revoca todas las sesiones activas y queda auditado.
         SCRUM-105.
       operationId: resetPassword
       security: []
@@ -402,7 +478,7 @@ paths:
       summary: Rechazar cuenta externa
       description: |
         Solo ADMIN. Cambia la cuenta a REJECTED. Motivo obligatorio.
-        Nueva solicitud permitida un día después del rechazo. Se conserva historial.
+        Nueva solicitud permitida 12 horas después del rechazo. Se conserva historial.
         SCRUM-108.
       operationId: rejectAccount
       parameters:
@@ -606,9 +682,9 @@ paths:
       tags: [RoleAssignments]
       summary: Asignar un rol contextual
       description: |
-        Solo ADMIN. Asigna PROGRAM_LEADER o OPERATIONAL_LEADER con ámbito
-        PROGRAM o ACTIVITY (scope_id requerido), o ADMIN con ámbito GLOBAL
-        (solo vía admin-grants). Vigencia opcional.
+        ADMIN asigna líderes a programas y delegaciones a actividades. Un líder de programa
+        puede delegar OPERATIONAL_LEADER a una actividad de su programa. Indicar scopeId.
+        Las altas de ADMIN pasan por /admin-grants.
       operationId: createRoleAssignment
       requestBody:
         required: true
@@ -978,6 +1054,42 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
+  /users/{userId}/change-email:
+    post:
+      tags: [Users]
+      summary: Reemplazar el correo de acceso de una cuenta
+      description: |
+        Solo ADMIN, con motivo obligatorio, para quien perdió el acceso a su correo.
+        Sin OTP. Revoca todas las sesiones; la persona recupera su contraseña con el correo nuevo.
+        La cuenta queda verificada solo si el correo nuevo es institucional. Queda auditado.
+        SCRUM-109.
+      operationId: changeUserEmail
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeUserEmailRequest'
+      responses:
+        '200':
+          description: Correo reemplazado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   # ──────────────────────────────────────────────
   # AUDIT EVENTS
   # ──────────────────────────────────────────────
@@ -1036,129 +1148,6 @@ paths:
   # ACADEMIC PERIODS
   # ──────────────────────────────────────────────
 
-  /academic-periods:
-    get:
-      tags: [AcademicPeriods]
-      summary: Listar periodos académicos
-      description: SCRUM-46.
-      operationId: listAcademicPeriods
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PageSizeParam'
-      responses:
-        '200':
-          description: Lista paginada de periodos
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedAcademicPeriods'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-    post:
-      tags: [AcademicPeriods]
-      summary: Crear periodo académico
-      description: |
-        Solo ADMIN. Etiqueta tipo `2026-1`.
-        SCRUM-46.
-      operationId: createAcademicPeriod
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateAcademicPeriodRequest'
-      responses:
-        '201':
-          description: Periodo creado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AcademicPeriodResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
-
-  /academic-periods/{periodId}:
-    get:
-      tags: [AcademicPeriods]
-      summary: Consultar periodo académico
-      operationId: getAcademicPeriod
-      parameters:
-        - $ref: '#/components/parameters/PeriodIdParam'
-      responses:
-        '200':
-          description: Detalle del periodo
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AcademicPeriodResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    put:
-      tags: [AcademicPeriods]
-      summary: Actualizar periodo académico
-      description: Solo ADMIN. SCRUM-46.
-      operationId: updateAcademicPeriod
-      parameters:
-        - $ref: '#/components/parameters/PeriodIdParam'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateAcademicPeriodRequest'
-      responses:
-        '200':
-          description: Periodo actualizado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AcademicPeriodResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-
-    delete:
-      tags: [AcademicPeriods]
-      summary: Eliminar periodo académico
-      description: |
-        Solo ADMIN. Baja lógica con `deleted_at`.
-        SCRUM-46.
-      operationId: deleteAcademicPeriod
-      parameters:
-        - $ref: '#/components/parameters/PeriodIdParam'
-      responses:
-        '204':
-          description: Periodo eliminado
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-
-  # ──────────────────────────────────────────────
-  # PROGRAMS
-  # ──────────────────────────────────────────────
-
   /programs:
     get:
       tags: [Programs]
@@ -1180,6 +1169,11 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: boolean
       responses:
         '200':
           description: Lista paginada de programas
@@ -1339,6 +1333,17 @@ paths:
       operationId: archiveProgram
       parameters:
         - $ref: '#/components/parameters/ProgramIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+              required: [reason]
       responses:
         '200':
           description: Programa archivado
@@ -1358,92 +1363,32 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
 
   # ──────────────────────────────────────────────
-  # PROGRAM PERIODS — vinculación programa ↔ periodo
+  # EQUIPOS DE PROGRAMAS
   # ──────────────────────────────────────────────
 
-  /programs/{programId}/periods:
+  /programs/{programId}/team:
     get:
-      tags: [ProgramPeriods]
-      summary: Listar periodos vinculados a un programa
-      operationId: listProgramPeriods
+      tags: [Programs]
+      summary: Equipo de líderes del programa
+      description: |
+        Líderes de programa y operativos con asignación vigente y sus delegaciones a actividades
+        del programa. Lo consultan ADMIN y el líder asignado. Se gestiona con /role-assignments. SCRUM-122.
+      operationId: getProgramTeam
       parameters:
         - $ref: '#/components/parameters/ProgramIdParam'
       responses:
         '200':
-          description: Lista de periodos vinculados
+          description: Equipo
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ProgramPeriodResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    post:
-      tags: [ProgramPeriods]
-      summary: Vincular un periodo a un programa
-      description: |
-        Solo ADMIN o PROGRAM_LEADER asignado.
-        Único por (programa, periodo).
-      operationId: addProgramPeriod
-      parameters:
-        - $ref: '#/components/parameters/ProgramIdParam'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AddProgramPeriodRequest'
-      responses:
-        '201':
-          description: Periodo vinculado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProgramPeriodResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                  $ref: '#/components/schemas/ProgramTeamMember'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-
-  /programs/{programId}/periods/{programPeriodId}:
-    delete:
-      tags: [ProgramPeriods]
-      summary: Desvincular un periodo de un programa
-      description: Solo ADMIN o PROGRAM_LEADER asignado.
-      operationId: removeProgramPeriod
-      parameters:
-        - $ref: '#/components/parameters/ProgramIdParam'
-        - name: programPeriodId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: Periodo desvinculado
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
-
-  # ──────────────────────────────────────────────
-  # ACTIVITIES
-  # ──────────────────────────────────────────────
 
   /activities:
     get:
@@ -1476,6 +1421,21 @@ paths:
           description: Si true, solo actividades sin programa
           schema:
             type: boolean
+        - name: groupLabel
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: fromDate
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: toDate
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: Lista paginada de actividades
@@ -1490,9 +1450,9 @@ paths:
       tags: [Activities]
       summary: Crear actividad
       description: |
-        ADMIN, o PROGRAM_LEADER del programa (o de independientes que tenga asignadas).
-        Se crea en estado DRAFT. `program_id` opcional (independiente si nulo).
-        `period_id` obligatorio; si tiene programa, el periodo debe estar vinculado.
+        ADMIN crea actividades independientes o de programa. PROGRAM_LEADER crea en sus programas.
+        Se crea en DRAFT con programId opcional. El servidor asigna el periodo activo.
+        Si el cliente envía periodId, debe coincidir con el periodo activo.
         SCRUM-47.
       operationId: createActivity
       requestBody:
@@ -1748,6 +1708,312 @@ paths:
   # CONFLICT CHECK (SCRUM-54)
   # ──────────────────────────────────────────────
 
+  /academic-periods:
+    get:
+      operationId: listAcademicPeriods
+      summary: Listar periodos
+      tags:
+      - AcademicPeriods
+      security: []
+      responses:
+        '200':
+          description: Listar periodos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicPeriodResponse'
+  /academic-periods/{periodId}:
+    put:
+      operationId: updateAcademicPeriod
+      summary: Actualizar nombre y fin del periodo activo
+      tags:
+      - AcademicPeriods
+      parameters:
+      - name: periodId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeriodEditRequest'
+      responses:
+        '200':
+          description: Actualizar nombre y fin del periodo activo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicPeriodResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /academic-periods/{periodId}/close:
+    post:
+      operationId: closeAcademicPeriod
+      summary: Cerrar el periodo y devolver su sucesor
+      tags:
+      - AcademicPeriods
+      parameters:
+      - name: periodId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeriodCloseRequest'
+      responses:
+        '200':
+          description: Cerrar el periodo y devolver su sucesor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicPeriodResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /programs/{programId}/periods:
+    get:
+      operationId: listProgramPeriods
+      summary: Listar periodos con actividades del programa
+      tags:
+      - AcademicPeriods
+      parameters:
+      - name: programId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Listar periodos con actividades del programa
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicPeriodResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /activities/{activityId}/participation:
+    put:
+      operationId: configureParticipation
+      summary: Configurar participación y reemplazar los grupos del borrador
+      tags:
+      - Activities
+      description: Vaciar el cupo de actividad antes de configurar grupos. En SIMPLE solo se admiten las coordenadas
+        del evento.
+      parameters:
+      - name: activityId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParticipationRequest'
+      responses:
+        '200':
+          description: Configurar participación y reemplazar los grupos del borrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /activities/{activityId}/enrollments:
+    post:
+      operationId: enroll
+      summary: Inscribirse con la cuenta activa
+      tags:
+      - Activities
+      description: 'Solo PUBLISHED antes del inicio. Enviar {} para actividad sin grupos o groupId para un turno.
+        Conflictos en code: CAPACITY_FULL, TIME_OVERLAP, ALREADY_ENROLLED, STATE_NOT_OPEN. Grupo incorrecto: 422 INVALID_GROUP.
+        Los intervalos consecutivos son compatibles.'
+      parameters:
+      - name: activityId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentRequest'
+      responses:
+        '200':
+          description: Inscribirse con la cuenta activa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+    get:
+      operationId: listActivityEnrollments
+      summary: Consultar inscripciones como responsable
+      tags:
+      - Activities
+      parameters:
+      - name: activityId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Consultar inscripciones como responsable
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EnrollmentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /activities/{activityId}/enrollments/{enrollmentId}:
+    delete:
+      operationId: cancelEnrollment
+      summary: Cancelar una inscripción propia y liberar el cupo
+      tags:
+      - Activities
+      parameters:
+      - name: activityId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: enrollmentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Cancelar una inscripción propia y liberar el cupo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /me/enrollments:
+    get:
+      operationId: listMyEnrollments
+      summary: Consultar las inscripciones propias
+      tags:
+      - Activities
+      responses:
+        '200':
+          description: Consultar las inscripciones propias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EnrollmentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
   /activities/check-conflicts:
     post:
       tags: [Activities]
@@ -1808,12 +2074,417 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
+  /catalog/periods:
+    get:
+      tags: [Catalog]
+      summary: Periodos académicos para los filtros del catálogo
+      description: |
+        Público. En M2 los periodos se siembran por configuración (ACADEMIC_PERIODS) y no se gestionan. SCRUM-46.
+      operationId: listCatalogPeriods
+      security: []
+      responses:
+        '200':
+          description: Periodos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicPeriodResponse'
+
+  /me/profile-image:
+    get:
+      tags:
+      - Profile
+      summary: Leer imagen o miniatura
+      responses:
+        '302':
+          description: Redirección al objeto privado, válida durante dos minutos.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+      parameters:
+      - in: query
+        name: thumbnail
+        schema:
+          type: boolean
+          default: false
+    post:
+      tags:
+      - Profile
+      summary: Subir imagen
+      responses:
+        '204':
+          description: Operación completada.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG o WebP, máximo 5 MiB, 8192 px por lado y 16
+                    megapíxeles.
+              required:
+              - file
+    put:
+      tags:
+      - Profile
+      summary: Sustituir imagen
+      responses:
+        '204':
+          description: Operación completada.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG o WebP, máximo 5 MiB, 8192 px por lado y 16
+                    megapíxeles.
+              required:
+              - file
+    delete:
+      tags:
+      - Profile
+      summary: Retirar imagen
+      responses:
+        '204':
+          description: Operación completada.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /programs/{id}/cover:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Programs
+      summary: Leer imagen o miniatura
+      responses:
+        '302':
+          description: Redirección al objeto privado, válida durante dos minutos.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+      security:
+      - {}
+      - BearerAuth: []
+      parameters:
+      - in: query
+        name: thumbnail
+        schema:
+          type: boolean
+          default: false
+    post:
+      tags:
+      - Programs
+      summary: Subir imagen
+      responses:
+        '204':
+          description: Operación completada.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG o WebP, máximo 5 MiB, 8192 px por lado y 16
+                    megapíxeles.
+              required:
+              - file
+    put:
+      tags:
+      - Programs
+      summary: Sustituir imagen
+      responses:
+        '204':
+          description: Operación completada.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG o WebP, máximo 5 MiB, 8192 px por lado y 16
+                    megapíxeles.
+              required:
+              - file
+    delete:
+      tags:
+      - Programs
+      summary: Retirar imagen
+      responses:
+        '204':
+          description: Operación completada.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /activities/{id}/image:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Activities
+      summary: Leer imagen o miniatura
+      responses:
+        '302':
+          description: Redirección al objeto privado, válida durante dos minutos.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+      security:
+      - {}
+      - BearerAuth: []
+      parameters:
+      - in: query
+        name: thumbnail
+        schema:
+          type: boolean
+          default: false
+    post:
+      tags:
+      - Activities
+      summary: Subir imagen
+      responses:
+        '204':
+          description: Operación completada.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG o WebP, máximo 5 MiB, 8192 px por lado y 16
+                    megapíxeles.
+              required:
+              - file
+    put:
+      tags:
+      - Activities
+      summary: Sustituir imagen
+      responses:
+        '204':
+          description: Operación completada.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: JPEG, PNG o WebP, máximo 5 MiB, 8192 px por lado y 16
+                    megapíxeles.
+              required:
+              - file
+    delete:
+      tags:
+      - Activities
+      summary: Retirar imagen
+      responses:
+        '204':
+          description: Operación completada.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /catalog/activities/{activityId}:
+    get:
+      tags:
+      - Catalog
+      summary: Consultar una actividad visible por identificador
+      operationId: getCatalogActivity
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/ActivityIdParam'
+      responses:
+        '200':
+          description: Ficha pública
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogActivitySummary'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /catalog/activities:
     get:
       tags: [Catalog]
       summary: Catálogo público de actividades
       description: |
-        Sin sesión. Actividades PUBLISHED o IN_PROGRESS.
+        Sin sesión. Incluye actividades publicadas, en ejecución, finalizadas y canceladas.
         Filtros por periodo, fecha y estado. Sin datos personales.
         SCRUM-52.
       operationId: listCatalogActivities
@@ -1835,7 +2506,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [PUBLISHED, IN_PROGRESS]
+            enum: [PUBLISHED, IN_PROGRESS, FINISHED, CANCELLED]
         - name: fromDate
           in: query
           schema:
@@ -1846,6 +2517,16 @@ paths:
           schema:
             type: string
             format: date-time
+        - name: independent
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: groupLabel
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: Actividades públicas
@@ -2000,12 +2681,180 @@ components:
   # ──────── Schemas ────────
 
   schemas:
+    GroupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        capacity:
+          type: integer
+          minimum: 0
+          nullable: true
+      required:
+      - name
+      - startsAt
+      - endsAt
+    ActivityGroupResponse:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        capacity:
+          type: integer
+          minimum: 0
+          nullable: true
+        id:
+          type: string
+          format: uuid
+      required:
+      - id
+      - name
+      - startsAt
+      - endsAt
+    ParticipationRequest:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupRequest'
+        allowMultipleGroups:
+          type: boolean
+        latitude:
+          type: number
+          nullable: true
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          nullable: true
+          minimum: -180
+          maximum: 180
+        geofenceRadiusM:
+          type: integer
+          nullable: true
+          minimum: 1
+        allowSelfCheckin:
+          type: boolean
+        checkinToleranceMin:
+          type: integer
+          minimum: 0
+      required:
+      - groups
+    ParticipationResponse:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityGroupResponse'
+        allowMultipleGroups:
+          type: boolean
+        latitude:
+          type: number
+          nullable: true
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          nullable: true
+          minimum: -180
+          maximum: 180
+        geofenceRadiusM:
+          type: integer
+          nullable: true
+          minimum: 1
+        allowSelfCheckin:
+          type: boolean
+        checkinToleranceMin:
+          type: integer
+          minimum: 0
+      required:
+      - groups
+      - allowMultipleGroups
+    EnrollmentRequest:
+      type: object
+      properties:
+        groupId:
+          type: string
+          format: uuid
+          nullable: true
+    EnrollmentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        activityId:
+          type: string
+          format: uuid
+        groupId:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum:
+          - ENROLLED
+          - CANCELLED
+        createdAt:
+          type: string
+          format: date-time
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - id
+      - userId
+      - activityId
+      - status
+      - createdAt
+    PeriodEditRequest:
+      type: object
+      properties:
+        label:
+          type: string
+          maxLength: 20
+        endDate:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - label
+    PeriodCloseRequest:
+      type: object
+      properties:
+        successorLabel:
+          type: string
+          maxLength: 20
+      required:
+      - successorLabel
+
     # ── Problem Details (RFC 9457) ──
 
     ProblemDetails:
       type: object
       description: RFC 9457 Problem Details
       properties:
+        code: {type: string, description: Código de rechazo para el cliente}
         type:
           type: string
           format: uri
@@ -2080,11 +2929,16 @@ components:
           type: string
         lastName:
           type: string
+        phone:
+          type: string
+          maxLength: 30
+          description: Teléfono de contacto; se guarda en el perfil
       required:
         - email
         - password
         - firstName
         - lastName
+        - phone
 
     RegisterResponse:
       type: object
@@ -2217,6 +3071,9 @@ components:
     GoogleAuthRequest:
       type: object
       properties:
+        firstName: {type: string, maxLength: 100}
+        lastName: {type: string, maxLength: 100}
+        phone: {type: string, maxLength: 30}
         idToken:
           type: string
           description: Token ID de Google
@@ -2226,16 +3083,84 @@ components:
     GoogleAuthResponse:
       type: object
       properties:
+        requiresProfileData:
+          type: boolean
+          description: La web debe repetir la solicitud con el ID token vigente y los datos personales completos antes de abrir la cuenta institucional.
         accountStatus:
           type: string
-          enum: [ACTIVE, PENDING_APPROVAL]
+          enum: [PRE_REGISTERED, PENDING_VERIFICATION, ACTIVE, PENDING_APPROVAL, REJECTED, SUSPENDED]
         isNewAccount:
           type: boolean
         tokens:
           $ref: '#/components/schemas/TokenPair'
+        email:
+          type: string
+          format: email
+        requiresApprovalData:
+          type: boolean
+          description: Si true, el cliente debe llamar a /auth/complete-registration
+        firstName:
+          type: string
+          nullable: true
+          description: Nombre de Google; al completar datos de Google
+        lastName:
+          type: string
+          nullable: true
+          description: Apellido de Google; al completar datos de Google
       required:
         - accountStatus
         - isNewAccount
+        - email
+        - requiresApprovalData
+
+    ReapplyRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+          maxLength: 30
+        relationWithPastoral:
+          type: string
+      required: [email, password, firstName, lastName, phone, relationWithPastoral]
+
+    SetPasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+          pattern: '^[0-9]{6}$'
+        password:
+          type: string
+          format: password
+          minLength: 8
+      required:
+        - email
+        - code
+        - password
+
+    SetPasswordResponse:
+      type: object
+      properties:
+        accountStatus:
+          type: string
+          enum: [ACTIVE, PENDING_APPROVAL]
+        tokens:
+          $ref: '#/components/schemas/TokenResponse'
+      required:
+        - accountStatus
 
     ForgotPasswordRequest:
       type: object
@@ -2520,6 +3445,8 @@ components:
     ProfileResponse:
       type: object
       properties:
+        imagePresent: {type: boolean}
+        imageUrl: {type: string, nullable: true, description: Ruta de lectura de la imagen. Usar la representación predeterminada cuando sea nula.}
         id:
           type: string
           format: uuid
@@ -2551,6 +3478,11 @@ components:
         createdAt:
           type: string
           format: date-time
+        verifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de verificación; los registros históricos pueden reflejar decisiones administrativas anteriores
       required:
         - id
         - email
@@ -2634,6 +3566,11 @@ components:
         createdAt:
           type: string
           format: date-time
+        verifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de verificación; los registros históricos pueden reflejar decisiones administrativas anteriores
       required:
         - id
         - email
@@ -2693,6 +3630,11 @@ components:
           type: string
           format: date-time
           nullable: true
+        verifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de verificación; los registros históricos pueden reflejar decisiones administrativas anteriores
       required:
         - id
         - email
@@ -2701,6 +3643,18 @@ components:
         - accountStatus
         - roles
         - createdAt
+
+    ChangeUserEmailRequest:
+      type: object
+      properties:
+        newEmail:
+          type: string
+          format: email
+          maxLength: 256
+        reason:
+          type: string
+          maxLength: 500
+      required: [newEmail, reason]
 
     SuspendUserRequest:
       type: object
@@ -2764,40 +3718,6 @@ components:
 
     # ── Academic Periods ──
 
-    CreateAcademicPeriodRequest:
-      type: object
-      properties:
-        label:
-          type: string
-          description: "Etiqueta tipo '2026-1'"
-          example: '2026-1'
-        startDate:
-          type: string
-          format: date-time
-        endDate:
-          type: string
-          format: date-time
-      required:
-        - label
-        - startDate
-        - endDate
-
-    UpdateAcademicPeriodRequest:
-      type: object
-      properties:
-        label:
-          type: string
-        startDate:
-          type: string
-          format: date-time
-        endDate:
-          type: string
-          format: date-time
-      required:
-        - label
-        - startDate
-        - endDate
-
     AcademicPeriodResponse:
       type: object
       properties:
@@ -2809,7 +3729,9 @@ components:
         startDate:
           type: string
           format: date-time
+        status: {type: string, enum: [ACTIVE, CLOSED]}
         endDate:
+          nullable: true
           type: string
           format: date-time
         createdAt:
@@ -2822,18 +3744,7 @@ components:
         - endDate
         - createdAt
 
-    PaginatedAcademicPeriods:
-      type: object
-      properties:
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/AcademicPeriodResponse'
-        meta:
-          $ref: '#/components/schemas/PaginationMeta'
-      required:
-        - items
-        - meta
+
 
     # ── Programs ──
 
@@ -2845,6 +3756,14 @@ components:
         description:
           type: string
           nullable: true
+        contact:
+          type: string
+          nullable: true
+          maxLength: 300
+        referenceSchedule:
+          type: string
+          nullable: true
+          maxLength: 500
       required:
         - name
 
@@ -2856,10 +3775,20 @@ components:
         description:
           type: string
           nullable: true
+        contact:
+          type: string
+          nullable: true
+          maxLength: 300
+        referenceSchedule:
+          type: string
+          nullable: true
+          maxLength: 500
 
     ProgramResponse:
       type: object
       properties:
+        imagePresent: {type: boolean}
+        imageUrl: {type: string, nullable: true, description: Ruta de lectura de la imagen. Usar la representación predeterminada cuando sea nula.}
         id:
           type: string
           format: uuid
@@ -2878,6 +3807,19 @@ components:
           type: string
           format: date-time
           nullable: true
+        contact:
+          type: string
+          nullable: true
+        referenceSchedule:
+          type: string
+          nullable: true
+        archivedAt:
+          type: string
+          format: date-time
+          nullable: true
+        canManage:
+          type: boolean
+          description: El actor puede gestionar este programa (ADMIN o líder asignado)
       required:
         - id
         - name
@@ -2897,41 +3839,6 @@ components:
         - items
         - meta
 
-    # ── Program Periods ──
-
-    AddProgramPeriodRequest:
-      type: object
-      properties:
-        periodId:
-          type: string
-          format: uuid
-      required:
-        - periodId
-
-    ProgramPeriodResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        programId:
-          type: string
-          format: uuid
-        periodId:
-          type: string
-          format: uuid
-        period:
-          $ref: '#/components/schemas/AcademicPeriodResponse'
-        createdAt:
-          type: string
-          format: date-time
-      required:
-        - id
-        - programId
-        - periodId
-        - period
-        - createdAt
-
     # ── Activities ──
 
     CreateActivityRequest:
@@ -2945,7 +3852,7 @@ components:
         periodId:
           type: string
           format: uuid
-          description: Obligatorio; si tiene programa, debe estar vinculado
+          description: Si se envía debe coincidir con el periodo activo. El servidor lo asigna.
         title:
           type: string
         description:
@@ -2966,15 +3873,31 @@ components:
           description: Debe ser posterior a startsAt
         capacity:
           type: integer
-          minimum: 1
+          minimum: 0
           nullable: true
           description: Nulo = sin límite
-        periodicityNote:
+        meetingUrl:
           type: string
           nullable: true
-          description: Nota orientativa de periodicidad (no genera ocurrencias)
+          maxLength: 500
+          description: Obligatorio para publicar si la modalidad es VIRTUAL o HYBRID
+        requiresRegistration:
+          type: boolean
+          description: Requiere registro previo. Sin registro previo no hay cupo.
+        expectedHours:
+          type: number
+          nullable: true
+          description: Horas previstas, solo informativas
+        participationConditions:
+          type: string
+          nullable: true
+          maxLength: 2000
+        groupLabel:
+          type: string
+          nullable: true
+          maxLength: 100
+          description: Etiqueta para agrupar actividades libres
       required:
-        - periodId
         - title
         - modality
         - startsAt
@@ -2982,8 +3905,9 @@ components:
 
     UpdateActivityRequest:
       type: object
+      required: [title, modality, startsAt, endsAt]
       description: |
-        Tras publicar: solo description, location y capacity (hacia arriba) son editables.
+        Enviar la ficha completa. Tras publicar: solo description, location y capacity (hacia arriba) son editables.
         Horario solo por reprogramación. Programa fijo.
       properties:
         title:
@@ -2999,15 +3923,43 @@ components:
           nullable: true
         capacity:
           type: integer
-          minimum: 1
+          minimum: 0
           nullable: true
-        periodicityNote:
+        meetingUrl:
           type: string
           nullable: true
+          maxLength: 500
+          description: Obligatorio para publicar si la modalidad es VIRTUAL o HYBRID
+        requiresRegistration:
+          type: boolean
+          description: Requiere registro previo. Sin registro previo no hay cupo.
+        expectedHours:
+          type: number
+          nullable: true
+          description: Horas previstas, solo informativas
+        participationConditions:
+          type: string
+          nullable: true
+          maxLength: 2000
+        groupLabel:
+          type: string
+          nullable: true
+          maxLength: 100
+          description: Etiqueta para agrupar actividades libres
+        startsAt:
+          type: string
+          format: date-time
+          description: Solo en DRAFT; publicada se reprograma
+        endsAt:
+          type: string
+          format: date-time
 
     ActivityResponse:
       type: object
       properties:
+        imagePresent: {type: boolean}
+        imageUrl: {type: string, nullable: true, description: Ruta de lectura de la imagen. Usar la representación predeterminada cuando sea nula.}
+        participation: {$ref: '#/components/schemas/ParticipationResponse'}
         id:
           type: string
           format: uuid
@@ -3037,9 +3989,6 @@ components:
           format: date-time
         capacity:
           type: integer
-          nullable: true
-        periodicityNote:
-          type: string
           nullable: true
         status:
           type: string
@@ -3063,6 +4012,32 @@ components:
           type: string
           format: date-time
           nullable: true
+        meetingUrl:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Obligatorio para publicar si la modalidad es VIRTUAL o HYBRID
+        requiresRegistration:
+          type: boolean
+          description: Requiere registro previo. Sin registro previo no hay cupo.
+        expectedHours:
+          type: number
+          nullable: true
+          description: Horas previstas, solo informativas
+        participationConditions:
+          type: string
+          nullable: true
+          maxLength: 2000
+        groupLabel:
+          type: string
+          nullable: true
+          maxLength: 100
+          description: Etiqueta para agrupar actividades libres
+        programName:
+          type: string
+          nullable: true
+        canManage:
+          type: boolean
       required:
         - id
         - periodId
@@ -3174,6 +4149,24 @@ components:
 
     # ── Conflict Check ──
 
+
+
+    ProgramTeamMember:
+      type: object
+      properties:
+        assignmentId: {type: string, format: uuid}
+        userId: {type: string, format: uuid}
+        fullName: {type: string}
+        email: {type: string}
+        role: {type: string, enum: [PROGRAM_LEADER, OPERATIONAL_LEADER]}
+        scope: {type: string, enum: [PROGRAM, ACTIVITY]}
+        scopeId: {type: string, format: uuid}
+        activityTitle: {type: string, nullable: true}
+        validFrom: {type: string, format: date-time, nullable: true}
+        validUntil: {type: string, format: date-time, nullable: true}
+        grantedBy: {type: string, format: uuid}
+      required: [assignmentId, userId, fullName, role, scope, scopeId]
+
     CheckConflictsRequest:
       type: object
       properties:
@@ -3191,6 +4184,11 @@ components:
         location:
           type: string
           nullable: true
+        programId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Programa de una actividad nueva (define sus responsables)
       required:
         - startsAt
         - endsAt
@@ -3232,12 +4230,20 @@ components:
     CatalogProgramSummary:
       type: object
       properties:
+        imagePresent: {type: boolean}
+        imageUrl: {type: string, nullable: true, description: Ruta de lectura de la imagen. Usar la representación predeterminada cuando sea nula.}
         id:
           type: string
           format: uuid
         name:
           type: string
         description:
+          type: string
+          nullable: true
+        contact:
+          type: string
+          nullable: true
+        referenceSchedule:
           type: string
           nullable: true
       required:
@@ -3260,6 +4266,9 @@ components:
     CatalogActivitySummary:
       type: object
       properties:
+        imagePresent: {type: boolean}
+        imageUrl: {type: string, nullable: true, description: Ruta de lectura de la imagen. Usar la representación predeterminada cuando sea nula.}
+        participation: {$ref: '#/components/schemas/ParticipationResponse'}
         id:
           type: string
           format: uuid
@@ -3292,8 +4301,19 @@ components:
           nullable: true
         status:
           type: string
-          enum: [PUBLISHED, IN_PROGRESS]
-        periodicityNote:
+          enum: [PUBLISHED, IN_PROGRESS, FINISHED, CANCELLED]
+        periodId:
+          type: string
+          format: uuid
+        groupLabel:
+          type: string
+          nullable: true
+        requiresRegistration:
+          type: boolean
+        expectedHours:
+          type: number
+          nullable: true
+        participationConditions:
           type: string
           nullable: true
       required:

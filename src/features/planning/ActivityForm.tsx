@@ -9,7 +9,6 @@ import styles from './planning.module.css'
 /** Estado editable del formulario: fechas en hora local y números como texto. */
 export interface ActivityDraft {
   programId: string
-  periodId: string
   title: string
   description: string
   modality: Modality
@@ -21,7 +20,6 @@ export interface ActivityDraft {
   capacity: string
   expectedHours: string
   participationConditions: string
-  periodicityNote: string
   groupLabel: string
 }
 
@@ -35,12 +33,11 @@ export function validateDraft(d: ActivityDraft, original?: Activity, period?: Pe
   const errors: Partial<Record<keyof ActivityDraft, string>> = {}
   if (!d.title.trim()) errors.title = 'El título es obligatorio.'
   else if (d.title.trim().length > 200) errors.title = 'El título admite hasta 200 caracteres.'
-  if (!d.periodId) errors.periodId = 'Elige el periodo académico.'
   if (!d.startsAt) errors.startsAt = 'Indica el inicio.'
   else if (period && !original) {
     // Igual que el servidor: desde el primer día del periodo hasta el final de su último día (UTC).
     const start = new Date(d.startsAt).getTime()
-    const end = new Date(period.endDate).getTime() + 86_400_000
+    const end = period.endDate ? new Date(period.endDate).getTime() + 86_400_000 : Number.POSITIVE_INFINITY
     if (start < new Date(period.startDate).getTime() || start >= end) errors.startsAt = `La actividad debe empezar dentro del periodo ${period.label}.`
   }
   if (!d.endsAt) errors.endsAt = 'Indica el fin.'
@@ -80,16 +77,14 @@ export function toPlan(d: ActivityDraft): ActivityPlan {
     capacity: d.requiresRegistration && d.capacity.trim() ? Number(d.capacity) : null,
     expectedHours: d.expectedHours.trim() ? Number(d.expectedHours) : null,
     participationConditions: text(d.participationConditions),
-    periodicityNote: text(d.periodicityNote),
     groupLabel: text(d.groupLabel),
   }
 }
 
-function initialDraft(activity: Activity | undefined, programs: PlanningProgram[], canCreateFree: boolean, periods: Period[]): ActivityDraft {
+function initialDraft(activity: Activity | undefined, programs: PlanningProgram[], canCreateFree: boolean): ActivityDraft {
   if (activity) {
     return {
       programId: activity.programId ?? FREE_PROGRAM,
-      periodId: activity.periodId,
       title: activity.title,
       description: activity.description ?? '',
       modality: activity.modality,
@@ -101,15 +96,11 @@ function initialDraft(activity: Activity | undefined, programs: PlanningProgram[
       capacity: activity.capacity?.toString() ?? '',
       expectedHours: activity.expectedHours?.toString() ?? '',
       participationConditions: activity.participationConditions ?? '',
-      periodicityNote: activity.periodicityNote ?? '',
       groupLabel: activity.groupLabel ?? '',
     }
   }
-  const now = Date.now()
-  const current = periods.find((p) => new Date(p.startDate).getTime() <= now && now <= new Date(p.endDate).getTime())
   return {
     programId: canCreateFree && programs.length === 0 ? FREE_PROGRAM : (programs[0]?.id ?? FREE_PROGRAM),
-    periodId: current?.id ?? periods[0]?.id ?? '',
     title: '',
     description: '',
     modality: 'IN_PERSON',
@@ -121,14 +112,12 @@ function initialDraft(activity: Activity | undefined, programs: PlanningProgram[
     capacity: '',
     expectedHours: '',
     participationConditions: '',
-    periodicityNote: '',
     groupLabel: '',
   }
 }
 
 export interface ActivityFormSubmit {
   programId: string | null
-  periodId: string
   plan: ActivityPlan
 }
 
@@ -139,7 +128,8 @@ interface ActivityFormProps {
   programs: PlanningProgram[]
   /** Solo el ADMIN crea actividades libres. */
   canCreateFree: boolean
-  periods: Period[]
+  /** Periodo activo: la actividad nace en él y su fecha de inicio debe caer dentro (lo asigna el servidor). */
+  activePeriod?: Period
   onSubmit: (value: ActivityFormSubmit) => Promise<void>
   onCancel: () => void
   /** Advertencias de solapamiento (SCRUM-54): si hay, se muestran y se guarda solo al confirmar. */
@@ -151,8 +141,8 @@ interface ActivityFormProps {
  * sin registro previo no hay cupo; el lugar y el enlace dependen de la modalidad. En una actividad publicada
  * o en ejecución solo cambian los campos informativos y el cupo hacia arriba (el horario va por reprogramación).
  */
-export function ActivityForm({ activity, programs, canCreateFree, periods, onSubmit, onCancel, checkConflicts }: ActivityFormProps) {
-  const [draft, setDraft] = useState(() => initialDraft(activity, programs, canCreateFree, periods))
+export function ActivityForm({ activity, programs, canCreateFree, activePeriod, onSubmit, onCancel, checkConflicts }: ActivityFormProps) {
+  const [draft, setDraft] = useState(() => initialDraft(activity, programs, canCreateFree))
   const [errors, setErrors] = useState<Partial<Record<keyof ActivityDraft, string>>>({})
   const [busy, setBusy] = useState(false)
   const [warnings, setWarnings] = useState<{ key: string; items: ConflictWarning[] } | null>(null)
@@ -166,13 +156,13 @@ export function ActivityForm({ activity, programs, canCreateFree, periods, onSub
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const found = validateDraft(draft, activity, periods.find((p) => p.id === draft.periodId))
+    const found = validateDraft(draft, activity, activePeriod)
     if (creating && isFree && !canCreateFree) found.programId = 'Solo un ADMIN crea actividades libres.'
     setErrors(found)
     if (Object.keys(found).length > 0) return
     setBusy(true)
     try {
-      const value = { programId: isFree ? null : draft.programId, periodId: draft.periodId, plan: toPlan(draft) }
+      const value = { programId: isFree ? null : draft.programId, plan: toPlan(draft) }
       // La advertencia no bloquea: el responsable decide guardar igual con un segundo clic.
       const key = JSON.stringify([value.programId, value.plan.startsAt, value.plan.endsAt, value.plan.location])
       if (checkConflicts && !locked && warnings?.key !== key) {
@@ -195,7 +185,7 @@ export function ActivityForm({ activity, programs, canCreateFree, periods, onSub
     <form className={styles.form} onSubmit={submit} aria-label={creating ? 'Nueva actividad' : 'Editar actividad'} noValidate>
       {locked && (
         <p className={styles.hint}>
-          La actividad ya está publicada: solo cambian descripción, lugar, enlace, condiciones, horas, nota y el cupo hacia arriba. Para cambiar el horario, reprográmala.
+          La actividad ya está publicada: solo cambian descripción, lugar, enlace, condiciones, horas y el cupo hacia arriba. Para cambiar el horario, reprográmala.
         </p>
       )}
 
@@ -228,18 +218,12 @@ export function ActivityForm({ activity, programs, canCreateFree, periods, onSub
             {error('programId')}
           </div>
           <div className={styles.group}>
-            <Field label="Periodo académico">
-              {(id) => (
-                <select id={id} className={consoleStyles.select} value={draft.periodId} disabled={!creating} onChange={(e) => set('periodId', e.target.value)}>
-                  <option value="">Elige un periodo</option>
-                  {periods.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-                </select>
-              )}
-            </Field>
-            {error('periodId')}
+            <p className={styles.hint}>
+              Periodo: {activePeriod ? activePeriod.label : 'activo'}. Lo asigna el sistema y no cambia.
+            </p>
           </div>
         </div>
-        {!creating && <p className={styles.hint}>El programa lo cambia un ADMIN con “Mover”; el periodo queda fijo.</p>}
+        {!creating && <p className={styles.hint}>El programa y el periodo de una actividad no se pueden cambiar.</p>}
         {isFree && (
           <Field label="Etiqueta de grupo">
             {(id) => (
@@ -284,18 +268,6 @@ export function ActivityForm({ activity, programs, canCreateFree, periods, onSub
             {error('endsAt')}
           </div>
         </div>
-        <Field label="Periodicidad (nota, opcional)">
-          {(id) => (
-            <input
-              id={id}
-              className={consoleStyles.select}
-              value={draft.periodicityNote}
-              maxLength={500}
-              placeholder="Ej.: todos los sábados de noviembre"
-              onChange={(e) => set('periodicityNote', e.target.value)}
-            />
-          )}
-        </Field>
       </fieldset>
 
       <fieldset className={styles.fieldset}>

@@ -25,7 +25,7 @@ const chipFor: Record<ActivityStatus, string> = {
 
 /**
  * Actividades de la consola (SCRUM-47, 48, 50, 51, 53, 123). La lista incluye borradores solo dentro del ámbito
- * de la persona; cada actividad trae `canManage` y `canMove` desde el servidor, que decide siempre.
+ * de la persona; cada actividad trae `canManage` desde el servidor, que decide siempre.
  */
 export function ActivitiesSection({ token, can, access }: { token: string; can: Capabilities; access: Access }) {
   const [periodId, setPeriodId] = useState('')
@@ -167,17 +167,17 @@ export function ActivitiesSection({ token, can, access }: { token: string; can: 
           <ActivityForm
             programs={manageable}
             canCreateFree={can.isAdmin}
-            periods={periods}
+            activePeriod={periods.find((p) => p.status === 'ACTIVE') ?? periods[0]}
             onCancel={() => setCreating(false)}
             checkConflicts={({ programId: target, plan }) =>
               planningApi.activities
                 .checkConflicts(token, { programId: target, startsAt: plan.startsAt, endsAt: plan.endsAt, location: plan.location })
                 .then((r) => r.conflicts)
             }
-            onSubmit={({ programId: target, periodId: period, plan }) =>
+            onSubmit={({ programId: target, plan }) =>
               run(
                 async () => {
-                  const created = await planningApi.activities.create(token, { ...plan, programId: target, periodId: period })
+                  const created = await planningApi.activities.create(token, { ...plan, programId: target })
                   setSelected(created.id)
                 },
                 'Borrador creado. Revísalo y publícalo cuando esté listo.',

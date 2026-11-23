@@ -9,7 +9,9 @@ export interface Period {
   id: string
   label: string
   startDate: string
-  endDate: string
+  /** El periodo activo no tiene fin hasta que un ADMIN lo cierra. */
+  endDate: string | null
+  status?: 'ACTIVE' | 'CLOSED'
 }
 
 export interface PlanningProgram {
@@ -23,6 +25,7 @@ export interface PlanningProgram {
   updatedAt?: string | null
   archivedAt?: string | null
   canManage: boolean
+  imageUrl?: string | null
 }
 
 export interface ProgramDetails {
@@ -32,7 +35,26 @@ export interface ProgramDetails {
   referenceSchedule: string | null
 }
 
-/** Planificación y configuración de una actividad (SCRUM-48, SCRUM-49). */
+export interface ActivityGroup {
+  id: string
+  name: string
+  startsAt: string
+  endsAt: string
+  capacity: number | null
+}
+
+/** Turnos, multirregistro y datos de ubicación del evento (PUCB-126, PUCB-234). */
+export interface Participation {
+  groups: ActivityGroup[]
+  allowMultipleGroups: boolean
+  latitude: number | null
+  longitude: number | null
+  geofenceRadiusM: number | null
+  allowSelfCheckin: boolean
+  checkinToleranceMin: number
+}
+
+/** Planificación y configuración de una actividad. */
 export interface ActivityPlan {
   title: string
   description: string | null
@@ -45,7 +67,6 @@ export interface ActivityPlan {
   capacity: number | null
   expectedHours: number | null
   participationConditions: string | null
-  periodicityNote: string | null
   groupLabel: string | null
 }
 
@@ -53,14 +74,16 @@ export interface Activity extends ActivityPlan {
   id: string
   programId?: string | null
   programName?: string | null
+  /** Lo asigna el servidor: toda actividad nace en el periodo activo. */
   periodId: string
+  participation: Participation
+  imageUrl?: string | null
   status: ActivityStatus
   cancellationReason?: string | null
   startedAt?: string | null
   finishedAt?: string | null
   createdAt: string
   canManage: boolean
-  canMove: boolean
 }
 
 export interface CatalogProgram {
@@ -69,9 +92,25 @@ export interface CatalogProgram {
   description?: string | null
   contact?: string | null
   referenceSchedule?: string | null
+  imageUrl?: string | null
 }
 
-export type CatalogActivity = Omit<Activity, 'meetingUrl' | 'canManage' | 'canMove' | 'createdAt'>
+export type CatalogActivity = Omit<Activity, 'meetingUrl' | 'canManage' | 'createdAt'>
+
+export type EnrollmentStatus = 'ENROLLED' | 'CANCELLED'
+
+export interface Enrollment {
+  id: string
+  activityId: string
+  groupId: string | null
+  userId: string
+  status: EnrollmentStatus
+  createdAt: string
+  cancelledAt: string | null
+}
+
+/** Códigos de error de inscripción que el servidor devuelve en el Problem Details. */
+export type EnrollmentErrorCode = 'INVALID_GROUP' | 'ALREADY_ENROLLED' | 'CAPACITY_FULL' | 'TIME_OVERLAP' | 'STATE_NOT_OPEN'
 
 export interface ConflictWarning {
   type: 'LEADER_OVERLAP' | 'LOCATION_OVERLAP'
@@ -101,6 +140,16 @@ export interface TeamMember {
   activityTitle?: string | null
   validUntil?: string | null
   grantedBy?: string | null
+}
+
+export interface ParticipationInput {
+  groups: { name: string; startsAt: string; endsAt: string; capacity: number | null }[]
+  allowMultipleGroups: boolean
+  latitude: number | null
+  longitude: number | null
+  geofenceRadiusM: number | null
+  allowSelfCheckin: boolean
+  checkinToleranceMin: number
 }
 
 export interface ActivityFilters {
@@ -139,7 +188,8 @@ export const planningApi = {
   activities: {
     list: (token: string, f: ActivityFilters) => request<Paginated<Activity>>(`/activities${filters(f)}`, { token }),
     get: (token: string, id: string) => request<Activity>(`/activities/${id}`, { token }),
-    create: (token: string, body: ActivityPlan & { programId: string | null; periodId: string }) =>
+    // El periodo lo asigna el servidor (el activo): la web no lo envía.
+    create: (token: string, body: ActivityPlan & { programId: string | null }) =>
       request<Activity>('/activities', { method: 'POST', body, token }),
     update: (token: string, id: string, body: ActivityPlan) => request<Activity>(`/activities/${id}`, { method: 'PATCH', body, token }),
     publish: (token: string, id: string) => request<Activity>(`/activities/${id}/publish`, { method: 'POST', token }),
@@ -149,15 +199,32 @@ export const planningApi = {
     reschedules: (token: string, id: string) => request<Reschedule[]>(`/activities/${id}/reschedules`, { token }),
     reschedule: (token: string, id: string, body: { reason: string; newStartsAt: string; newEndsAt: string }) =>
       request<{ activity: Activity; conflicts: ConflictWarning[] }>(`/activities/${id}/reschedules`, { method: 'POST', body, token }),
-    move: (token: string, id: string, programId: string | null, reason: string) =>
-      request<Activity>(`/activities/${id}/move`, { method: 'POST', body: { programId, reason }, token }),
+    setParticipation: (token: string, id: string, body: ParticipationInput) =>
+      request<Activity>(`/activities/${id}/participation`, { method: 'PUT', body, token }),
     checkConflicts: (
       token: string,
       body: { activityId?: string; programId?: string | null; startsAt: string; endsAt: string; location?: string | null },
     ) => request<{ hasConflicts: boolean; conflicts: ConflictWarning[] }>('/activities/check-conflicts', { method: 'POST', body, token }),
   },
 
-  // Público: no exige sesión (SCRUM-52).
+  enrollments: {
+    enroll: (token: string, activityId: string, groupId: string | null) =>
+      request<Enrollment>(`/activities/${activityId}/enrollments`, { method: 'POST', body: { groupId }, token }),
+    cancel: (token: string, activityId: string, enrollmentId: string) =>
+      request<void>(`/activities/${activityId}/enrollments/${enrollmentId}`, { method: 'DELETE', token }),
+    mine: (token: string) => request<Enrollment[]>('/me/enrollments', { token }),
+    ofActivity: (token: string, activityId: string) => request<Enrollment[]>(`/activities/${activityId}/enrollments`, { token }),
+  },
+
+  academicPeriods: {
+    list: (token: string) => request<Period[]>('/academic-periods', { token }),
+    edit: (token: string, id: string, body: { label: string; endDate: string | null }) =>
+      request<Period>(`/academic-periods/${id}`, { method: 'PUT', body, token }),
+    close: (token: string, id: string, successorLabel: string) =>
+      request<Period>(`/academic-periods/${id}/close`, { method: 'POST', body: { successorLabel }, token }),
+  },
+
+  // Público: no exige sesión.
   catalog: {
     programs: (periodId?: string) => request<Paginated<CatalogProgram>>(`/catalog/programs${query({ periodId, pageSize: 100 })}`),
     activities: (f: ActivityFilters) => request<Paginated<CatalogActivity>>(`/catalog/activities${filters(f)}`),
