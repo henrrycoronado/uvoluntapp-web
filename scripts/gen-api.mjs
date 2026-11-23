@@ -96,7 +96,9 @@ function schemaToTs(schema, indent = '') {
 }
 
 function pascalCase(str) {
-  return str.replace(/(^|[^a-zA-Z0-9])([a-zA-Z])/g, (_, _sep, c) => c.toUpperCase())
+  return str
+    .replace(/(^|[^a-zA-Z0-9])([a-zA-Z])/g, (_, _sep, c) => c.toUpperCase())
+    .replace(/[^a-zA-Z0-9]/g, '')
 }
 
 // ── Generate types.ts ──────────────────────────────────
