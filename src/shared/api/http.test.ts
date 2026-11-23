@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { installSessionRefresh, readSession, writeSession } from '../../features/auth/session'
-import { request } from './http'
+import { fetchImage, request } from './http'
 
 describe('request', () => {
   afterEach(() => {
@@ -35,5 +35,25 @@ describe('request', () => {
   it('no rompe con respuestas que no son JSON', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<html>Bad gateway</html>', { status: 502 })))
     await expect(request('/profile')).rejects.toMatchObject({ status: 502 })
+  })
+})
+
+describe('fetchImage', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('descarga sin cookies y con la sesión en Authorization, para que R2 no exija Allow-Credentials', async () => {
+    const fetchMock = vi.fn(async () => new Response(new Blob(['x'], { type: 'image/webp' })))
+    vi.stubGlobal('fetch', fetchMock)
+    const blob = await fetchImage('/programs/p1/cover?thumbnail=true', 'tok')
+    expect(blob).not.toBeNull()
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toContain('/programs/p1/cover')
+    expect(init.credentials).toBe('omit')
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer tok')
+  })
+
+  it('devuelve null si la imagen no existe', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 404 })))
+    expect(await fetchImage('/programs/p1/cover', 'tok')).toBeNull()
   })
 })

@@ -93,8 +93,12 @@ export function imageSrc(imageUrl: string | null | undefined, thumbnail = true):
   return `${baseUrl}${imageUrl.replace(/^\/api\/v1/, '')}${thumbnail ? '?thumbnail=true' : ''}`
 }
 
-/** Descarga una imagen protegida (el servidor responde con una redirección a una URL temporal). */
+/**
+ * Descarga una imagen protegida: la API responde con una redirección a una URL temporal de R2.
+ * Va sin cookies (`omit`): la sesión viaja en `Authorization`, y R2 no responde `Allow-Credentials`,
+ * así que con `include` el navegador bloquearía la imagen aunque el CORS del bucket esté bien.
+ */
 export async function fetchImage(path: string, token?: string): Promise<Blob | null> {
-  const response = await fetch(`${baseUrl}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, credentials: 'include' })
+  const response = await fetch(`${baseUrl}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, credentials: 'omit' })
   return response.ok ? response.blob() : null
 }
