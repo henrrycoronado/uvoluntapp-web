@@ -49,7 +49,7 @@ export function LandingPage() {
         <section className={styles.block} aria-labelledby="actividades">
           <h2 id="actividades" className={styles.blockTitle}>Próximas actividades</h2>
           <p className={styles.text}>Mira lo que viene sin iniciar sesión. Para participar, crea tu cuenta.</p>
-          <CatalogActivities />
+          <CatalogActivities onLogin={() => navigate('/acceso')} />
         </section>
 
         <section className={styles.block} aria-labelledby="programas">

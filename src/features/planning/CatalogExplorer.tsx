@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button } from '../../shared/ui'
 import { describe } from '../console/sections/useAction'
 import { ActivityCalendar } from './ActivityCalendar'
-import { planningApi, type CatalogActivity, type CatalogProgram, type Period } from './api'
+import { planningApi, type CatalogActivity, type CatalogProgram, type Enrollment, type Period } from './api'
+import { EnrollmentPanel } from './EnrollmentPanel'
 import { activityPlace, activityStatusLabels, dayRange, formatSchedule, modalityLabels } from './format'
 import consoleStyles from '../console/console.module.css'
 import styles from './planning.module.css'
@@ -59,7 +60,7 @@ const FREE = '__libres__'
  * Actividades publicadas o en ejecución, en lista o calendario con los mismos filtros (SCRUM-52).
  * Las de programa se agrupan por programa; las libres, por su etiqueta de grupo.
  */
-export function CatalogActivities({ initialProgramId }: { initialProgramId?: string }) {
+export function CatalogActivities({ initialProgramId, token, onLogin }: { initialProgramId?: string; token?: string; onLogin?: () => void }) {
   const [periodId, setPeriodId] = useState('')
   const [programId, setProgramId] = useState(initialProgramId ?? '')
   const [status, setStatus] = useState<'' | 'PUBLISHED' | 'IN_PROGRESS'>('')
@@ -69,6 +70,11 @@ export function CatalogActivities({ initialProgramId }: { initialProgramId?: str
   const [open, setOpen] = useState<string | null>(null)
 
   useEffect(() => setProgramId(initialProgramId ?? ''), [initialProgramId])
+
+  // Inscripciones de la persona (solo con sesión); se recargan tras inscribirse o cancelar.
+  const [version, setVersion] = useState(0)
+  const mine = useCatalog<Enrollment[]>(() => (token ? planningApi.enrollments.mine(token) : Promise.resolve([])), [token, version])
+  const enrollments = mine.status === 'ready' ? mine.data : []
 
   const periods = useCatalog<Period[]>(() => planningApi.periods(), [])
   const programs = useCatalog(() => planningApi.catalog.programs(), [])
@@ -164,17 +170,30 @@ export function CatalogActivities({ initialProgramId }: { initialProgramId?: str
                       <span>{activityPlace(a)}</span>
                       <span>{a.requiresRegistration ? (a.capacity ? `Cupo: ${a.capacity}` : 'Requiere registro previo') : 'Sin registro previo'}</span>
                     </span>
-                    {open === a.id && (
-                      <span className={styles.group}>
-                        {a.description && <span className={styles.meta}>{a.description}</span>}
-                        <dl className={styles.facts}>
-                          <div><dt>Modalidad</dt><dd>{modalityLabels[a.modality]}</dd></div>
-                          {a.expectedHours != null && <div><dt>Horas previstas</dt><dd>{a.expectedHours} h (informativas)</dd></div>}
-                          {a.participationConditions && <div><dt>Condiciones</dt><dd>{a.participationConditions}</dd></div>}
-                        </dl>
-                      </span>
-                    )}
                   </button>
+                  {open === a.id && (
+                    <div className={styles.group}>
+                      {a.description && <p className={styles.meta}>{a.description}</p>}
+                      <dl className={styles.facts}>
+                        <div><dt>Modalidad</dt><dd>{modalityLabels[a.modality]}</dd></div>
+                        {a.expectedHours != null && <div><dt>Horas previstas</dt><dd>{a.expectedHours} h (informativas)</dd></div>}
+                        {a.participationConditions && <div><dt>Condiciones</dt><dd>{a.participationConditions}</dd></div>}
+                        {a.participation.groups.length > 0 && (
+                          <div>
+                            <dt>Turnos</dt>
+                            <dd>
+                              <ul>
+                                {a.participation.groups.map((g) => (
+                                  <li key={g.id}>{g.name} · {formatSchedule(g.startsAt, g.endsAt)}{g.capacity != null ? ` · cupo ${g.capacity}` : ''}</li>
+                                ))}
+                              </ul>
+                            </dd>
+                          </div>
+                        )}
+                      </dl>
+                      <EnrollmentPanel activity={a} token={token} mine={enrollments} onLogin={onLogin} onChanged={() => setVersion((v) => v + 1)} />
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

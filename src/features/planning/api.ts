@@ -228,6 +228,7 @@ export const planningApi = {
   catalog: {
     programs: (periodId?: string) => request<Paginated<CatalogProgram>>(`/catalog/programs${query({ periodId, pageSize: 100 })}`),
     activities: (f: ActivityFilters) => request<Paginated<CatalogActivity>>(`/catalog/activities${filters(f)}`),
+    activity: (id: string) => request<CatalogActivity>(`/catalog/activities/${id}`),
   },
 
   delegations: {

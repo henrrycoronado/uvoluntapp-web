@@ -47,8 +47,8 @@ export function HomePage() {
           }}
         />
       )}
-      {section === 'actividades' && <ActivitiesSection programId={programFilter} />}
-      {section === 'registros' && <RecordsSection />}
+      {section === 'actividades' && <ActivitiesSection programId={programFilter} token={token} />}
+      {section === 'registros' && <RecordsSection token={token} />}
       {section === 'perfil' && (
         <>
           <h1 className={styles.heading}>Perfil</h1>
