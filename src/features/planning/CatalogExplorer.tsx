@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { imageSrc } from '../../shared/api/http'
 import { Button } from '../../shared/ui'
 import { describe } from '../console/sections/useAction'
 import { ActivityCalendar } from './ActivityCalendar'
@@ -37,6 +38,7 @@ export function CatalogPrograms({ onSeeActivities }: { onSeeActivities?: (progra
     <ul className={styles.list}>
       {programs.data.items.map((p) => (
         <li key={p.id} className={styles.item}>
+          {p.imageUrl && <img src={imageSrc(p.imageUrl)} alt={`Portada de ${p.name}`} loading="lazy" style={{ maxWidth: '100%', borderRadius: '0.5rem' }} />}
           <h3 className={styles.itemTitle}>{p.name}</h3>
           {p.description && <p className={styles.meta}>{p.description}</p>}
           <dl className={styles.facts}>
@@ -173,6 +175,7 @@ export function CatalogActivities({ initialProgramId, token, onLogin }: { initia
                   </button>
                   {open === a.id && (
                     <div className={styles.group}>
+                      {a.imageUrl && <img src={imageSrc(a.imageUrl, false)} alt={`Imagen de ${a.title}`} loading="lazy" style={{ maxWidth: '100%', borderRadius: '0.5rem' }} />}
                       {a.description && <p className={styles.meta}>{a.description}</p>}
                       <dl className={styles.facts}>
                         <div><dt>Modalidad</dt><dd>{modalityLabels[a.modality]}</dd></div>

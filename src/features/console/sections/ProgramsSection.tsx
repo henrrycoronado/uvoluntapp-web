@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react'
 import type { Capabilities } from '../../../shared/session/capabilities'
-import { Button, ConfirmButton } from '../../../shared/ui'
+import { Button, ConfirmButton, ImageField } from '../../../shared/ui'
 import { planningApi, type PlanningProgram, type ProgramDetails } from '../../planning/api'
 import { programStatusLabels } from '../../planning/format'
 import styles from '../console.module.css'
@@ -152,6 +152,7 @@ function ProgramDetail({ token, program, onChanged, onArchived }: ProgramDetailP
         </dl>
       )}
 
+      {!editing && <ImageField token={token} path={`/programs/${program.id}/cover`} label="Portada del programa" hasImage={!!program.imageUrl} canEdit={manage} onChanged={onChanged} />}
       {manage && !editing && (
         <div className={styles.actions}>
           <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>Editar ficha</Button>

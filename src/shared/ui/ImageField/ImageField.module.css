@@ -1,0 +1,7 @@
+.field { display: flex; flex-direction: column; gap: var(--space-2, 0.5rem); }
+.preview { max-width: 100%; max-height: 14rem; object-fit: cover; border-radius: var(--radius-md, 0.5rem); }
+.empty { margin: 0; color: var(--color-text-muted, #5f6b7a); font-size: 0.875rem; }
+.error { margin: 0; color: var(--color-danger, #b3261e); font-size: 0.875rem; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2, 0.5rem); align-items: center; }
+.upload { cursor: pointer; }
+.visually { display: block; margin-bottom: 0.25rem; font-size: 0.875rem; }

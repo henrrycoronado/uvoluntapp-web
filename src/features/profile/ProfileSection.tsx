@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { activeRolesByRank, roleLabels } from '../../shared/session/roles'
 import { useTheme } from '../../shared/theme/theme'
-import { Button, TextField } from '../../shared/ui'
+import { Button, ImageField, TextField } from '../../shared/ui'
 import { logout } from '../auth/logout'
 import { describe } from '../console/sections/useAction'
 import { profileApi, type ProfileView } from './api'
@@ -57,6 +57,9 @@ export function ProfileSection({ token, profile, onSaved }: ProfileSectionProps)
   return (
     <div className={styles.layout}>
       <div className={styles.stack}>
+        <section className={styles.card} aria-label="Foto de perfil">
+          <ImageField token={token} path="/me/profile-image" label="Foto de perfil" hasImage={!!profile.imageUrl} canEdit onChanged={onSaved} />
+        </section>
         <section className={styles.card} aria-labelledby="profile-data">
           <h2 id="profile-data" className={styles.title}>Mis datos</h2>
           <dl className={styles.facts}>

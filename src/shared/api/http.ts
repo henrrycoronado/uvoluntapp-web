@@ -86,3 +86,15 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 
   return data as T
 }
+
+/** URL de una imagen pública del catálogo a partir del `imageUrl` relativo que entrega la API. */
+export function imageSrc(imageUrl: string | null | undefined, thumbnail = true): string | undefined {
+  if (!imageUrl) return undefined
+  return `${baseUrl}${imageUrl.replace(/^\/api\/v1/, '')}${thumbnail ? '?thumbnail=true' : ''}`
+}
+
+/** Descarga una imagen protegida (el servidor responde con una redirección a una URL temporal). */
+export async function fetchImage(path: string, token?: string): Promise<Blob | null> {
+  const response = await fetch(`${baseUrl}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : undefined, credentials: 'include' })
+  return response.ok ? response.blob() : null
+}

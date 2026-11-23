@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Capabilities } from '../../../shared/session/capabilities'
-import { Button, ConfirmButton } from '../../../shared/ui'
+import { Button, ConfirmButton, ImageField } from '../../../shared/ui'
 import { ActivityForm } from '../../planning/ActivityForm'
 import { planningApi, type Activity, type ActivityStatus, type ConflictWarning, type Period, type PlanningProgram } from '../../planning/api'
 import { activityStatusLabels, formatSchedule, fromLocalInput, modalityLabels, toLocalInput } from '../../planning/format'
@@ -126,6 +126,7 @@ export function ActivityDetail({ token, activity: a, can, programs, periods, onC
         <p className={styles.muted}>Para publicar, el programa debe estar activo y la actividad tener lugar o enlace según su modalidad.</p>
       )}
 
+      {!editing && <ImageField token={token} path={`/activities/${a.id}/image`} label="Imagen de la actividad" hasImage={!!a.imageUrl} canEdit={manage && a.status !== 'FINISHED' && a.status !== 'CANCELLED'} onChanged={onChanged} />}
       {manage && a.status === 'DRAFT' && !editing && <ParticipationForm key={`part-${a.id}-${a.participation.groups.length}`} token={token} activity={a} onSaved={onChanged} />}
       {manage && a.requiresRegistration && a.status !== 'DRAFT' && <EnrollmentList token={token} activity={a} />}
       {manage && a.status === 'PUBLISHED' && !editing && <RescheduleForm key={`form-${a.startsAt}`} token={token} activity={a} onDone={onChanged} report={run} />}
