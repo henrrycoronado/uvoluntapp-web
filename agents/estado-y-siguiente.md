@@ -6,6 +6,7 @@ Corte: 23 de noviembre de 2026 · Rama de trabajo `fix/m2-validacion` · Jira: p
 
 - La fuente de verdad son los tickets de Jira, el Figma `SistemaPastoral` (referencia base, no copia literal) y `AGENTS.md`. Este archivo resume el estado; no los sustituye.
 - No hacer `git push`, crear PRs ni cambiar estados o fechas en Jira sin confirmación explícita.
+- Ramas: la cabecera es `main` (no existe `master`). Por ahora no se hace merge ni PR hacia `main`: todo el avance funcional se integra en `develop`.
 - Commits `tipo(alcance): descripción`, sin firmas de herramientas de IA.
 - La API se consume con el cliente generado: `npm run gen:api` copia `contracts/openapi.yaml` del backend (repo hermano en `~/Documents/GitHub/uvoluntapp-backend`) y ejecuta `scripts/gen-api.mjs`. La carpeta `src/api/generated/` no se versiona ni se edita a mano. Si falta un campo o endpoint, se pide primero en el backend.
 - Los topes de longitud de cuenta y perfil están en `LIMITS` (`src/features/auth/validation.ts`) y repiten los del backend (`FieldLimits.cs`).
