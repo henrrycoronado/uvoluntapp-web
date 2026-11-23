@@ -72,7 +72,7 @@ export interface Program {
 export interface NewRoleAssignment {
   userId: string
   role: 'PROGRAM_LEADER' | 'OPERATIONAL_LEADER'
-  scope: 'GLOBAL' | 'PROGRAM'
+  scope: 'GLOBAL' | 'PROGRAM' | 'ACTIVITY'
   scopeId: string | null
   /** Fin de la vigencia (UTC); null es sin vencimiento. */
   validUntil: string | null

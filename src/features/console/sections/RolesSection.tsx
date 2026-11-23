@@ -1,9 +1,10 @@
-import { type FormEvent, useMemo, useState } from 'react'
+import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import type { ProfileView } from '../../profile/api'
 import type { Capabilities } from '../../../shared/session/capabilities'
 import { activeRolesByRank } from '../../../shared/session/roles'
 import { Button, ConfirmButton } from '../../../shared/ui'
 import type { Access } from '../access'
+import { planningApi } from '../../planning/api'
 import { consoleApi, type NewRoleAssignment, type Program, type RoleAssignment, type UserSummary } from '../api'
 import styles from '../console.module.css'
 import { Field } from './Field'
@@ -70,11 +71,12 @@ function ManageRoles({ token, can }: { token: string; can: Capabilities }) {
   }
   const programName = (id?: string | null) => programs.items.find((p) => p.id === id)?.name ?? 'Programa'
   const canRevoke = (r: RoleAssignment) =>
-    !r.revokedAt && (can.isAdmin || (r.role === 'OPERATIONAL_LEADER' && !!r.scopeId && can.ledProgramIds.includes(r.scopeId)))
+    !r.revokedAt && (can.isAdmin || (r.role === 'OPERATIONAL_LEADER' && !!r.scopeId && (r.scope === 'ACTIVITY' ? can.isProgramLeader : can.ledProgramIds.includes(r.scopeId))))
 
   return (
     <div className={styles.panel}>
       <AssignForm
+        token={token}
         can={can}
         users={users.items.filter((u) => u.accountStatus === 'ACTIVE')}
         programs={can.isAdmin ? programs.items : programs.items.filter((p) => can.ledProgramIds.includes(p.id))}
@@ -99,7 +101,7 @@ function ManageRoles({ token, can }: { token: string; can: Capabilities }) {
               <tr key={r.id}>
                 <td>{userName(r.userId)}</td>
                 <td>{roleLabels[r.role] ?? r.role}</td>
-                <td>{r.scope === 'GLOBAL' ? (r.role === 'ADMIN' ? 'Global' : 'Sin programa asignado') : programName(r.scopeId)}</td>
+                <td>{r.scope === 'GLOBAL' ? (r.role === 'ADMIN' ? 'Global' : 'Sin programa asignado') : r.scope === 'ACTIVITY' ? 'Una actividad' : programName(r.scopeId)}</td>
                 <td>{assignmentState(r)}</td>
                 <td>
                   {canRevoke(r) && (
@@ -128,13 +130,14 @@ function assignmentState(r: RoleAssignment): string {
 }
 
 interface AssignFormProps {
+  token: string
   can: Capabilities
   users: UserSummary[]
   programs: Program[]
   onAssign: (body: NewRoleAssignment) => Promise<void>
 }
 
-function AssignForm({ can, users, programs, onAssign }: AssignFormProps) {
+function AssignForm({ token, can, users, programs, onAssign }: AssignFormProps) {
   const roleOptions = useMemo(
     () => (can.isAdmin ? (['PROGRAM_LEADER', 'OPERATIONAL_LEADER'] as const) : (['OPERATIONAL_LEADER'] as const)),
     [can.isAdmin],
@@ -143,6 +146,26 @@ function AssignForm({ can, users, programs, onAssign }: AssignFormProps) {
   const [role, setRole] = useState<NewRoleAssignment['role']>(roleOptions[0])
   const [programId, setProgramId] = useState('')
   const [until, setUntil] = useState('')
+  const [activityId, setActivityId] = useState('')
+  const [activities, setActivities] = useState<{ id: string; title: string }[]>([])
+
+  // El líder operativo se delega sobre una actividad concreta del programa, no sobre el programa entero.
+  const needsActivity = role === 'OPERATIONAL_LEADER'
+  useEffect(() => {
+    setActivityId('')
+    if (!needsActivity || !programId) {
+      setActivities([])
+      return
+    }
+    let active = true
+    planningApi.activities
+      .list(token, { programId })
+      .then((page) => active && setActivities(page.items.filter((a) => a.canManage && a.status !== 'FINISHED' && a.status !== 'CANCELLED').map((a) => ({ id: a.id, title: a.title }))))
+      .catch(() => active && setActivities([]))
+    return () => {
+      active = false
+    }
+  }, [needsActivity, programId, token])
 
   const allowNoProgram = can.isAdmin && role === 'PROGRAM_LEADER'
   const today = new Date().toISOString().slice(0, 10)
@@ -152,8 +175,8 @@ function AssignForm({ can, users, programs, onAssign }: AssignFormProps) {
     await onAssign({
       userId,
       role,
-      scope: programId ? 'PROGRAM' : 'GLOBAL',
-      scopeId: programId || null,
+      scope: needsActivity ? 'ACTIVITY' : programId ? 'PROGRAM' : 'GLOBAL',
+      scopeId: needsActivity ? activityId : programId || null,
       // La vigencia cubre el día elegido completo.
       validUntil: until ? new Date(`${until}T23:59:59`).toISOString() : null,
     })
@@ -190,10 +213,22 @@ function AssignForm({ can, users, programs, onAssign }: AssignFormProps) {
           </select>
         )}
       </Field>
+      {needsActivity && (
+        <Field label="Actividad">
+          {(id) => (
+            <select id={id} className={styles.select} value={activityId} onChange={(e) => setActivityId(e.target.value)} required>
+              <option value="">{programId ? (activities.length ? 'Elige una actividad' : 'Sin actividades disponibles') : 'Elige primero un programa'}</option>
+              {activities.map((a) => (
+                <option key={a.id} value={a.id}>{a.title}</option>
+              ))}
+            </select>
+          )}
+        </Field>
+      )}
       <Field label="Vigente hasta (opcional)">
         {(id) => <input id={id} type="date" className={styles.select} min={today} value={until} onChange={(e) => setUntil(e.target.value)} />}
       </Field>
-      <Button type="submit" variant="primary" disabled={!userId || (!allowNoProgram && !programId)}>
+      <Button type="submit" variant="primary" disabled={!userId || (!allowNoProgram && !programId) || (needsActivity && !activityId)}>
         Asignar
       </Button>
     </form>
