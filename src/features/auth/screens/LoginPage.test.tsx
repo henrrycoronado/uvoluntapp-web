@@ -17,9 +17,9 @@ describe('LoginPage', () => {
     )
 
     render(<LoginPage />)
-    fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'admin@uvoluntapp.test' } })
+    fireEvent.change(screen.getByLabelText('Correo electrónico'), { target: { value: 'admin@uvoluntapp.test' } })
     fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'incorrecta' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar sesión' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Correo o contraseña incorrectos.')
     expect(sessionStorage.getItem('uvoluntapp.session')).toBeNull()
@@ -30,9 +30,9 @@ describe('LoginPage', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(tokens), { status: 200 })))
 
     render(<LoginPage />)
-    fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'admin@uvoluntapp.test' } })
+    fireEvent.change(screen.getByLabelText('Correo electrónico'), { target: { value: 'admin@uvoluntapp.test' } })
     fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'correcta' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar sesión' }))
 
     await waitFor(() => expect(sessionStorage.getItem('uvoluntapp.session')).not.toBeNull())
     expect(JSON.parse(sessionStorage.getItem('uvoluntapp.session')!).accessToken).toBe('a')
@@ -43,9 +43,9 @@ describe('LoginPage', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(problem), { status: 409 })))
 
     render(<LoginPage />)
-    fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@gmail.com' } })
+    fireEvent.change(screen.getByLabelText('Correo electrónico'), { target: { value: 'ana@gmail.com' } })
     fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'cualquiera' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar sesión' }))
 
     await waitFor(() => expect(window.location.pathname).toBe('/crear-contrasena'))
     expect(sessionStorage.getItem('uvoluntapp.pendingEmail')).toBe('ana@gmail.com')
@@ -63,9 +63,9 @@ describe('LoginPage', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(problem), { status: 422 })))
 
     render(<LoginPage />)
-    fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@gmail.com' } })
+    fireEvent.change(screen.getByLabelText('Correo electrónico'), { target: { value: 'ana@gmail.com' } })
     fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'correcta1' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar sesión' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Motivo: Sin vínculo')
   })

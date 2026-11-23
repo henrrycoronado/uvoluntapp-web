@@ -13,6 +13,38 @@ export function validateImage(file: Pick<File, 'type' | 'size'>): string | null 
   return null
 }
 
+/** Descarga una imagen protegida y la expone como URL de objeto; null mientras carga o si no hay imagen. */
+export function useProtectedImage(path: string, token: string, enabled: boolean, version = 0): string | null {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    if (!enabled) {
+      setUrl(null)
+      return
+    }
+    let active = true
+    let objectUrl: string | null = null
+    fetchImage(`${path}?thumbnail=true`, token)
+      .then((blob) => {
+        if (!active || !blob || typeof URL.createObjectURL !== 'function') return
+        objectUrl = URL.createObjectURL(blob)
+        setUrl(objectUrl)
+      })
+      .catch(() => active && setUrl(null))
+    return () => {
+      active = false
+      if (objectUrl && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(objectUrl)
+    }
+  }, [path, token, enabled, version])
+  return url
+}
+
+/** Sube (o reemplaza) una imagen del recurso por multipart. */
+export async function uploadImage(token: string, path: string, file: File): Promise<void> {
+  const body = new FormData()
+  body.append('file', file)
+  await request<void>(path, { method: 'PUT', body, token })
+}
+
 interface ImageFieldProps {
   token: string
   /** Ruta de la API del recurso, por ejemplo `/programs/{id}/cover`. */
@@ -25,30 +57,10 @@ interface ImageFieldProps {
 
 /** Vista previa, carga, sustitución y retiro de una imagen del recurso (R2 vía la API). */
 export function ImageField({ token, path, label, hasImage, canEdit, onChanged }: ImageFieldProps) {
-  const [preview, setPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [version, setVersion] = useState(0)
-
-  useEffect(() => {
-    if (!hasImage) {
-      setPreview(null)
-      return
-    }
-    let active = true
-    let url: string | null = null
-    fetchImage(`${path}?thumbnail=true`, token)
-      .then((blob) => {
-        if (!active || !blob || typeof URL.createObjectURL !== 'function') return
-        url = URL.createObjectURL(blob)
-        setPreview(url)
-      })
-      .catch(() => active && setPreview(null))
-    return () => {
-      active = false
-      if (url && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(url)
-    }
-  }, [hasImage, path, token, version])
+  const preview = useProtectedImage(path, token, hasImage, version)
 
   async function upload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -59,9 +71,7 @@ export function ImageField({ token, path, label, hasImage, canEdit, onChanged }:
     setError(null)
     setBusy(true)
     try {
-      const body = new FormData()
-      body.append('file', file)
-      await request<void>(path, { method: 'PUT', body, token })
+      await uploadImage(token, path, file)
       setVersion((v) => v + 1)
       onChanged()
     } catch (caught) {
@@ -75,7 +85,7 @@ export function ImageField({ token, path, label, hasImage, canEdit, onChanged }:
     setError(null)
     try {
       await request<void>(path, { method: 'DELETE', token })
-      setPreview(null)
+      setVersion((v) => v + 1)
       onChanged()
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'No pudimos quitar la imagen.')
@@ -100,3 +110,16 @@ export function ImageField({ token, path, label, hasImage, canEdit, onChanged }:
   )
 }
 
+
+/** Imagen protegida con marcador de posición (tarjetas y listas de la consola). */
+export function ProtectedImage({ token, path, enabled, alt, className, fallbackClassName }: {
+  token: string
+  path: string
+  enabled: boolean
+  alt: string
+  className?: string
+  fallbackClassName?: string
+}) {
+  const url = useProtectedImage(path, token, enabled)
+  return url ? <img className={className} src={url} alt={alt} loading="lazy" /> : <span className={fallbackClassName} aria-hidden="true" />
+}

@@ -39,7 +39,7 @@ function loadScript(): Promise<void> {
 }
 
 /** Botón oficial de Google. Entrega el id_token a onCredential; la sesión la abre la API. */
-export function GoogleButton({ onCredential, onError }: { onCredential: (idToken: string) => void; onError: (message: string) => void }) {
+export function GoogleButton({ onCredential, onError, text = 'continue_with' }: { onCredential: (idToken: string) => void; onError: (message: string) => void; text?: 'continue_with' | 'signup_with' }) {
   const container = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export function GoogleButton({ onCredential, onError }: { onCredential: (idToken
         window.google.accounts.id.renderButton(container.current, {
           theme: 'outline',
           size: 'large',
-          text: 'continue_with',
+          text,
           shape: 'rectangular',
           locale: 'es',
           width: 320,
@@ -62,7 +62,7 @@ export function GoogleButton({ onCredential, onError }: { onCredential: (idToken
     return () => {
       active = false
     }
-  }, [onCredential, onError])
+  }, [onCredential, onError, text])
 
   if (!clientId) return null
   return <div ref={container} aria-label="Continuar con Google" />

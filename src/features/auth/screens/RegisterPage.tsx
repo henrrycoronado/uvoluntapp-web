@@ -71,34 +71,37 @@ export function RegisterPage() {
 
   return (
     <AuthLayout
-      title="Crear cuenta"
-      description="Con tu correo @ucb.edu.bo la cuenta se activa al verificarla. Con otro correo, un administrador la revisa."
+      variant="register"
+      eyebrow="Haz parte de la comunidad"
+      title="Crea tu cuenta"
+      description="Completa tus datos. Si eliges registro manual, verificaremos tu correo mediante un código de un solo uso."
     >
       {shownError && <p role="alert" className={styles.alert}>{shownError}</p>}
       {google.notice && <p role="status" className={styles.notice}>{google.notice}</p>}
-      <div className={styles.google}>
-        <GoogleButton onCredential={google.onCredential} onError={google.onError} />
-      </div>
-      <p className={styles.divider}><span>o con tu correo</span></p>
       <form className={styles.form} onSubmit={onSubmit} noValidate>
         <div className={styles.row}>
-          <TextField label="Nombres" autoComplete="given-name" required {...bind('firstName')} />
-          <TextField label="Apellidos" autoComplete="family-name" required {...bind('lastName')} />
+          <TextField label="Nombres" placeholder="Tus nombres" autoComplete="given-name" required {...bind('firstName')} />
+          <TextField label="Apellidos" placeholder="Tus apellidos" autoComplete="family-name" required {...bind('lastName')} />
         </div>
-        <TextField label="Teléfono" type="tel" inputMode="tel" autoComplete="tel" required {...bind('phone')} />
-        <TextField label="Correo" type="email" autoComplete="email" inputMode="email" required {...bind('email')} />
-        <TextField label="Contraseña" type="password" autoComplete="new-password" hint={passwordHint} required {...bind('password')} />
-        <TextField label="Repite la contraseña" type="password" autoComplete="new-password" required {...bind('confirm')} />
+        <TextField label="Correo electrónico" placeholder="nombre@ucb.edu.bo" type="email" autoComplete="email" inputMode="email" required {...bind('email')} />
+        <TextField label="Teléfono" placeholder="Ej. +591 7XXXXXXX" type="tel" inputMode="tel" autoComplete="tel" required {...bind('phone')} />
+        <TextField label="Contraseña" placeholder="Crea una contraseña segura" type="password" autoComplete="new-password" hint={passwordHint} required {...bind('password')} />
+        <TextField label="Confirmar contraseña" placeholder="Repite tu contraseña" type="password" autoComplete="new-password" required {...bind('confirm')} />
+        <p className={styles.info}>Te enviaremos un código para verificar tu correo. Si es externo a @ucb.edu.bo, necesitarás la aprobación de Pastoral.</p>
         <div className={styles.actions}>
           <Button type="submit" variant="primary" size="lg" disabled={submitting}>
             {submitting ? 'Enviando código…' : 'Continuar'}
           </Button>
         </div>
       </form>
+      <p className={styles.divider}><span>o</span></p>
+      <div className={styles.google}>
+        <GoogleButton onCredential={google.onCredential} onError={google.onError} text="signup_with" />
+      </div>
       <p className={styles.footnote}>
-        ¿Ya tienes cuenta?{' '}
+        <span>¿Ya tienes una cuenta?</span>
         <button type="button" className={styles.link} onClick={() => navigate('/acceso')}>
-          Inicia sesión
+          Iniciar sesión <span aria-hidden="true">→</span>
         </button>
       </p>
     </AuthLayout>

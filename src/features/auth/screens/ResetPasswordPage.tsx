@@ -67,7 +67,7 @@ export function ResetPasswordPage() {
   })
 
   return (
-    <AuthLayout title="Crea una contraseña nueva" description="Elige una contraseña que no uses en otros sitios.">
+    <AuthLayout variant="register" eyebrow="Recuperar acceso" title="Crea una contraseña nueva" description="Elige una contraseña que no uses en otros sitios.">
       {error && <p role="alert" className={styles.alert}>{error}</p>}
       <form className={styles.form} onSubmit={onSubmit} noValidate>
         <TextField label="Contraseña nueva" type="password" autoComplete="new-password" hint={`Mínimo ${PASSWORD_MIN} caracteres.`} required {...bind('password')} />

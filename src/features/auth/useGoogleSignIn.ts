@@ -22,6 +22,7 @@ export function useGoogleSignIn() {
       } else if (result.requiresProfileData) {
         // Cuenta institucional nueva sin teléfono: se completan los datos y se repite la solicitud con el mismo token.
         setPendingGoogleToken(idToken)
+        setPendingEmail(result.email)
         setPendingNames({ firstName: result.firstName ?? '', lastName: result.lastName ?? '' })
         navigate('/completar-perfil')
       } else if (result.requiresApprovalData) {

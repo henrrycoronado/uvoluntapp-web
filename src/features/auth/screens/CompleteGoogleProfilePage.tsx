@@ -3,7 +3,7 @@ import { navigate } from '../../../app/navigation'
 import { Button, TextField } from '../../../shared/ui'
 import { AuthLayout } from '../AuthLayout'
 import styles from '../auth.module.css'
-import { readPendingGoogleToken, readPendingNames } from '../session'
+import { readPendingEmail, readPendingGoogleToken, readPendingNames } from '../session'
 import { useFieldErrors } from '../useFieldErrors'
 import { useGoogleSignIn } from '../useGoogleSignIn'
 import { phoneError, requiredError } from '../validation'
@@ -17,6 +17,7 @@ interface Values {
 /** Acceso institucional con Google al que le faltan datos de contacto: se completan y se repite la solicitud. */
 export function CompleteGoogleProfilePage() {
   const idToken = readPendingGoogleToken()
+  const email = readPendingEmail()
   const [values, setValues] = useState<Values>({ ...readPendingNames(), phone: '' })
   const [submitting, setSubmitting] = useState(false)
   const google = useGoogleSignIn()
@@ -55,20 +56,34 @@ export function CompleteGoogleProfilePage() {
   })
 
   return (
-    <AuthLayout title="Completa tu perfil" description="Necesitamos tus datos de contacto para activar tu cuenta institucional.">
+    <AuthLayout
+      variant="register"
+      eyebrow="Google OAuth confirmado"
+      title="Un último paso para comenzar"
+      description="Confirmamos tu identidad con Google. Revisa los datos de tu perfil y agrega un teléfono válido antes de crear la cuenta."
+    >
       {google.error && <p role="alert" className={styles.alert}>{google.error}</p>}
       <form className={styles.form} onSubmit={onSubmit} noValidate>
         <div className={styles.row}>
-          <TextField label="Nombres" autoComplete="given-name" required {...bind('firstName')} />
-          <TextField label="Apellidos" autoComplete="family-name" required {...bind('lastName')} />
+          <TextField label="Nombres (editable)" autoComplete="given-name" required {...bind('firstName')} />
+          <TextField label="Apellidos (editable)" autoComplete="family-name" required {...bind('lastName')} />
         </div>
-        <TextField label="Teléfono" type="tel" inputMode="tel" autoComplete="tel" required {...bind('phone')} />
+        {email && <TextField label="Correo verificado · no editable" value={email} readOnly disabled />}
+        <TextField label="Teléfono" placeholder="Ej. +591 7XXXXXXX" type="tel" inputMode="tel" autoComplete="tel" required {...bind('phone')} />
+        <p className={styles.info}>
+          El número debe cumplir el formato internacional y ser único. Si utilizas un correo externo, la cuenta podrá requerir aprobación institucional. No se solicita contraseña ni OTP.
+        </p>
         <div className={styles.actions}>
           <Button type="submit" variant="primary" size="lg" disabled={submitting}>
-            {submitting ? 'Guardando…' : 'Continuar'}
+            {submitting ? 'Guardando…' : 'Completar registro'}
           </Button>
         </div>
       </form>
+      <div className={styles.stackLinks}>
+        <button type="button" className={styles.link} onClick={() => navigate('/acceso')}>
+          ¿Prefieres volver a tu cuenta Google?
+        </button>
+      </div>
     </AuthLayout>
   )
 }

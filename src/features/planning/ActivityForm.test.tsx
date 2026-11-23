@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ActivityForm, type ActivityDraft, validateDraft } from './ActivityForm'
 import type { Activity, Period, PlanningProgram } from './api'
@@ -47,8 +47,8 @@ describe('ActivityForm', () => {
 
   it('muestra lugar o enlace según la modalidad', () => {
     renderForm()
-    const modality = screen.getByLabelText('Modalidad')
-    expect(screen.getByLabelText('Lugar')).toBeInTheDocument()
+    const modality = screen.getByLabelText('Modalidad del evento')
+    expect(screen.getByLabelText('Nombre del lugar')).toBeInTheDocument()
     expect(screen.queryByLabelText('Enlace de la reunión')).toBeNull()
 
     fireEvent.change(modality, { target: { value: 'VIRTUAL' } })
@@ -56,7 +56,7 @@ describe('ActivityForm', () => {
     expect(screen.getByLabelText('Enlace de la reunión')).toBeInTheDocument()
 
     fireEvent.change(modality, { target: { value: 'HYBRID' } })
-    expect(screen.getByLabelText('Lugar')).toBeInTheDocument()
+    expect(screen.getByLabelText('Nombre del lugar')).toBeInTheDocument()
     expect(screen.getByLabelText('Enlace de la reunión')).toBeInTheDocument()
   })
 
@@ -66,7 +66,7 @@ describe('ActivityForm', () => {
     unmount()
 
     renderForm({ canCreateFree: true })
-    fireEvent.change(screen.getByLabelText('Programa'), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Programa vinculado'), { target: { value: '' } })
     expect(screen.getByLabelText('Etiqueta de grupo')).toBeInTheDocument()
   })
 
@@ -78,9 +78,9 @@ describe('ActivityForm', () => {
       createdAt: '2026-11-01T00:00:00Z', canManage: true,
     } satisfies Activity
     renderForm({ activity: published })
-    expect(screen.getByLabelText('Título')).toBeDisabled()
-    expect(screen.getByLabelText('Inicio')).toBeDisabled()
-    expect(screen.getByLabelText('Modalidad')).toBeDisabled()
+    expect(screen.getByLabelText('Título de la actividad *')).toBeDisabled()
+    expect(screen.getByLabelText('Fecha de inicio *')).toBeDisabled()
+    expect(screen.getByLabelText('Modalidad del evento')).toBeDisabled()
     expect(screen.getByLabelText('Requiere registro previo')).toBeDisabled()
     expect(screen.getByLabelText('Cupo')).toBeEnabled()
     expect(validateDraft(draft({ requiresRegistration: true, capacity: '5' }), published).capacity).toMatch(/solo puede aumentar/)
@@ -104,10 +104,12 @@ describe('ActivityForm', () => {
     expect(await screen.findByText('El título es obligatorio.')).toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
 
-    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Visita' } })
-    fireEvent.change(screen.getByLabelText('Lugar'), { target: { value: 'Plaza' } })
-    fireEvent.change(screen.getByLabelText('Inicio'), { target: { value: '2026-11-22T09:00' } })
-    fireEvent.change(screen.getByLabelText('Fin'), { target: { value: '2026-11-22T11:00' } })
+    fireEvent.change(screen.getByLabelText('Título de la actividad *'), { target: { value: 'Visita' } })
+    fireEvent.change(screen.getByLabelText('Nombre del lugar'), { target: { value: 'Plaza' } })
+    fireEvent.change(screen.getByLabelText('Fecha de inicio *'), { target: { value: '2026-11-22' } })
+    fireEvent.change(screen.getByLabelText('Hora de inicio *'), { target: { value: '09:00' } })
+    fireEvent.change(screen.getByLabelText('Fecha de fin *'), { target: { value: '2026-11-22' } })
+    fireEvent.change(screen.getByLabelText('Hora de fin *'), { target: { value: '11:00' } })
     fireEvent.click(screen.getByRole('button', { name: 'Crear borrador' }))
     await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
     const [{ programId, plan }] = onSubmit.mock.calls[0] as unknown as [{ programId: string; plan: { capacity: unknown; meetingUrl: unknown } }]
@@ -122,10 +124,12 @@ describe('ActivityForm', () => {
       { type: 'LOCATION_OVERLAP' as const, conflictingActivityId: 'x', conflictingActivityTitle: 'Otra', message: 'El lugar "Plaza" ya está ocupado por "Otra".' },
     ])
     renderForm({ onSubmit, checkConflicts })
-    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Visita' } })
-    fireEvent.change(screen.getByLabelText('Lugar'), { target: { value: 'Plaza' } })
-    fireEvent.change(screen.getByLabelText('Inicio'), { target: { value: '2026-11-22T09:00' } })
-    fireEvent.change(screen.getByLabelText('Fin'), { target: { value: '2026-11-22T11:00' } })
+    fireEvent.change(screen.getByLabelText('Título de la actividad *'), { target: { value: 'Visita' } })
+    fireEvent.change(screen.getByLabelText('Nombre del lugar'), { target: { value: 'Plaza' } })
+    fireEvent.change(screen.getByLabelText('Fecha de inicio *'), { target: { value: '2026-11-22' } })
+    fireEvent.change(screen.getByLabelText('Hora de inicio *'), { target: { value: '09:00' } })
+    fireEvent.change(screen.getByLabelText('Fecha de fin *'), { target: { value: '2026-11-22' } })
+    fireEvent.change(screen.getByLabelText('Hora de fin *'), { target: { value: '11:00' } })
     fireEvent.click(screen.getByRole('button', { name: 'Crear borrador' }))
     expect(await screen.findByText(/ya está ocupado/)).toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
@@ -133,5 +137,27 @@ describe('ActivityForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Guardar de todos modos' }))
     await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
     expect(checkConflicts).toHaveBeenCalledTimes(1)
+  })
+
+  it('al crear acepta una imagen válida y la entrega junto con el borrador', async () => {
+    const onSubmit = vi.fn(async () => undefined)
+    renderForm({ onSubmit })
+    fireEvent.change(screen.getByLabelText('Título de la actividad *'), { target: { value: 'Visita' } })
+    fireEvent.change(screen.getByLabelText('Nombre del lugar'), { target: { value: 'Plaza' } })
+    fireEvent.change(screen.getByLabelText('Fecha de inicio *'), { target: { value: '2026-11-22' } })
+    fireEvent.change(screen.getByLabelText('Hora de inicio *'), { target: { value: '09:00' } })
+    fireEvent.change(screen.getByLabelText('Fecha de fin *'), { target: { value: '2026-11-22' } })
+    fireEvent.change(screen.getByLabelText('Hora de fin *'), { target: { value: '11:00' } })
+    const file = new File(['x'], 'a.png', { type: 'image/png' })
+    fireEvent.change(screen.getByLabelText('Adjuntar imagen de actividad'), { target: { files: [file] } })
+    fireEvent.click(screen.getByRole('button', { name: 'Crear borrador' }))
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled())
+    expect((onSubmit.mock.calls[0] as unknown as [{ image: File | null }])[0].image).toBe(file)
+  })
+
+  it('rechaza una imagen que no es JPG, PNG o WebP', () => {
+    renderForm()
+    fireEvent.change(screen.getByLabelText('Adjuntar imagen de actividad'), { target: { files: [new File(['x'], 'a.pdf', { type: 'application/pdf' })] } })
+    expect(screen.getByRole('alert')).toHaveTextContent(/JPG, PNG o WebP/)
   })
 })

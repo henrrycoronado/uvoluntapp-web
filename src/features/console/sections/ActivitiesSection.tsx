@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import type { Capabilities } from '../../../shared/session/capabilities'
-import { Button } from '../../../shared/ui'
+import { Button, uploadImage } from '../../../shared/ui'
 import { ActivityCalendar } from '../../planning/ActivityCalendar'
 import { ActivityForm } from '../../planning/ActivityForm'
 import { planningApi, type Activity, type ActivityStatus } from '../../planning/api'
 import { activityPlace, activityStatusLabels, dayRange, formatSchedule } from '../../planning/format'
+import detail from '../../planning/detail.module.css'
 import planning from '../../planning/planning.module.css'
 import type { Access } from '../access'
 import styles from '../console.module.css'
@@ -73,7 +74,47 @@ export function ActivitiesSection({ token, can, access }: { token: string; can: 
     reload()
   }
 
+  if (creating) {
+    return (
+      <div className={detail.stack}>
+        <button type="button" className={detail.back} onClick={() => setCreating(false)}>← Actividades</button>
+        <div>
+          <h1 className={styles.heading}>Planificación y estados de actividad</h1>
+          <p className={styles.summary}>Período obligatorio asignado por el sistema; programa opcional e inmutable. La configuración de asistencia es distinta de la marcación.</p>
+        </div>
+        <Feedback message={message?.kind === 'error' ? message : null} />
+        <ActivityForm
+          programs={manageable}
+          canCreateFree={can.isAdmin}
+          activePeriod={periods.find((p) => p.status === 'ACTIVE') ?? periods[0]}
+          onCancel={() => setCreating(false)}
+          checkConflicts={({ programId: target, plan }) =>
+            planningApi.activities
+              .checkConflicts(token, { programId: target, startsAt: plan.startsAt, endsAt: plan.endsAt, location: plan.location })
+              .then((r) => r.conflicts)
+          }
+          onSubmit={({ programId: target, plan, image }) =>
+            run(
+              async () => {
+                const created = await planningApi.activities.create(token, { ...plan, programId: target })
+                if (image) await uploadImage(token, `/activities/${created.id}/image`, image)
+                setSelected(created.id)
+              },
+              'Borrador creado. Revísalo y publícalo cuando esté listo.',
+              () => { setCreating(false); reload() },
+            )
+          }
+        />
+      </div>
+    )
+  }
+
   return (
+    <>
+    <div>
+      <h1 className={styles.heading}>Actividades</h1>
+      <p className={styles.summary}>Calendario, cupos y estados de cada actividad.</p>
+    </div>
     <div className={planning.split}>
       <section className={styles.panel} aria-label="Lista de actividades">
         <div className={planning.toolbar}>
@@ -160,34 +201,6 @@ export function ActivitiesSection({ token, can, access }: { token: string; can: 
           ))}
       </section>
 
-      {creating && (
-        <section className={styles.panel} aria-label="Nueva actividad">
-          <h2 className={styles.subheading}>Nueva actividad</h2>
-          <p className={styles.muted}>Se guarda como borrador; nadie fuera de su ámbito la ve hasta publicarla.</p>
-          <ActivityForm
-            programs={manageable}
-            canCreateFree={can.isAdmin}
-            activePeriod={periods.find((p) => p.status === 'ACTIVE') ?? periods[0]}
-            onCancel={() => setCreating(false)}
-            checkConflicts={({ programId: target, plan }) =>
-              planningApi.activities
-                .checkConflicts(token, { programId: target, startsAt: plan.startsAt, endsAt: plan.endsAt, location: plan.location })
-                .then((r) => r.conflicts)
-            }
-            onSubmit={({ programId: target, plan }) =>
-              run(
-                async () => {
-                  const created = await planningApi.activities.create(token, { ...plan, programId: target })
-                  setSelected(created.id)
-                },
-                'Borrador creado. Revísalo y publícalo cuando esté listo.',
-                () => { setCreating(false); reload() },
-              )
-            }
-          />
-        </section>
-      )}
-
       {!creating && current && (
         <ActivityDetail
           key={current.id}
@@ -206,5 +219,6 @@ export function ActivitiesSection({ token, can, access }: { token: string; can: 
         </section>
       )}
     </div>
+    </>
   )
 }

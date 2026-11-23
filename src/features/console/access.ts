@@ -13,6 +13,8 @@ export interface SectionDefinition {
   title: string
   summary: string
   feature: Feature
+  /** La sección dibuja su propio encabezado (el prototipo lo hace en listas con acción principal). */
+  ownHeading?: boolean
   /** true cuando la sección ya funciona contra la API; false cuando llega con un módulo posterior. */
   live: boolean
   module?: string
@@ -77,6 +79,7 @@ export const sections: SectionDefinition[] = [
   {
     id: 'programas',
     title: 'Programas',
+    ownHeading: true,
     summary: 'Programas que gestionas y los que puedes consultar.',
     feature: 'Planificación',
     live: true,
@@ -85,6 +88,7 @@ export const sections: SectionDefinition[] = [
   {
     id: 'actividades',
     title: 'Actividades',
+    ownHeading: true,
     summary: 'Calendario, cupos y estados de cada actividad.',
     feature: 'Planificación',
     live: true,

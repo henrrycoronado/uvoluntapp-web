@@ -43,11 +43,17 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <AuthLayout title="Recupera tu contraseña" description="Escribe el correo de tu cuenta y te enviaremos un enlace para crear una contraseña nueva.">
+    <AuthLayout
+      variant="register"
+      eyebrow="Recuperar acceso"
+      title="¿Olvidaste tu contraseña?"
+      description="Indica tu correo para solicitar un enlace temporal. Te ayudaremos a restablecer tu contraseña."
+    >
       {error && <p role="alert" className={styles.alert}>{error}</p>}
       <form className={styles.form} onSubmit={onSubmit} noValidate>
         <TextField
-          label="Correo"
+          label="Correo electrónico"
+          placeholder="nombre@ucb.edu.bo"
           name="email"
           type="email"
           inputMode="email"
@@ -58,17 +64,19 @@ export function ForgotPasswordPage() {
           onChange={(event) => setEmail(event.target.value)}
           required
         />
+        <p className={styles.info}>Para proteger las cuentas, la respuesta de recuperación no confirma públicamente si un correo está registrado.</p>
         <div className={styles.actions}>
           <Button type="submit" variant="primary" size="lg" disabled={submitting}>
             {submitting ? 'Enviando…' : 'Enviar enlace'}
           </Button>
         </div>
       </form>
-      <p className={styles.footnote}>
+      <div className={styles.stackLinks}>
         <button type="button" className={styles.link} onClick={() => navigate('/acceso')}>
-          Volver a iniciar sesión
+          Volver a inicio de sesión
         </button>
-      </p>
+        <p className={styles.help}>Solo se enviará un correo al recuperar contraseña y al registrar manualmente.</p>
+      </div>
     </AuthLayout>
   )
 }

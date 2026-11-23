@@ -29,11 +29,11 @@ describe('CompleteGoogleProfilePage', () => {
     vi.stubGlobal('fetch', fetchMock)
     render(<CompleteGoogleProfilePage />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Continuar' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Completar registro' }))
     expect(fetchMock).not.toHaveBeenCalled()
 
     await userEvent.type(screen.getByLabelText(/Teléfono/), '76543210')
-    await userEvent.click(screen.getByRole('button', { name: 'Continuar' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Completar registro' }))
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toContain('/auth/google')

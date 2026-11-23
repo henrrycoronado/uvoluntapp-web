@@ -63,10 +63,12 @@ export function ConsolePage() {
         </>
       ) : (
         <>
-          <div>
-            <h1 className={styles.heading}>{current.title}</h1>
-            <p className={styles.summary}>{current.summary}</p>
-          </div>
+          {!current.ownHeading && (
+            <div>
+              <h1 className={styles.heading}>{current.title}</h1>
+              <p className={styles.summary}>{current.summary}</p>
+            </div>
+          )}
           {current.id === 'resumen' && <OverviewSection token={token} can={can} profile={profile} onOpen={select} />}
           {current.id === 'usuarios' && <UsersSection token={token} access={current.level} />}
           {current.id === 'aprobaciones' && <ApprovalsSection token={token} />}

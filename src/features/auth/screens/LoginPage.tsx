@@ -46,16 +46,17 @@ export function LoginPage() {
   const shownNotice = notice ?? google.notice
 
   return (
-    <AuthLayout title="Iniciar sesión" description="Entra con tu cuenta de Google o con tu correo y contraseña.">
+    <AuthLayout
+      eyebrow="Acceso a tu cuenta"
+      title="Bienvenido de nuevo"
+      description="Ingresa para continuar participando en la comunidad y consultar tus actividades."
+    >
       {shownError && <p role="alert" className={styles.alert}>{shownError}</p>}
       {shownNotice && <p role="status" className={styles.notice}>{shownNotice}</p>}
-      <div className={styles.google}>
-        <GoogleButton onCredential={google.onCredential} onError={google.onError} />
-      </div>
-      <p className={styles.divider}><span>o con tu correo</span></p>
       <form className={styles.form} onSubmit={onSubmit} noValidate>
         <TextField
-          label="Correo"
+          label="Correo electrónico"
+          placeholder="nombre@ucb.edu.bo"
           name="email"
           type="email"
           inputMode="email"
@@ -78,20 +79,25 @@ export function LoginPage() {
           required
         />
         <div className={styles.meta}>
+          <span>Acceso protegido</span>
           <button type="button" className={styles.link} onClick={() => navigate('/recuperar')}>
             ¿Olvidaste tu contraseña?
           </button>
         </div>
         <div className={styles.actions}>
           <Button type="submit" variant="primary" size="lg" disabled={submitting}>
-            {submitting ? 'Entrando…' : 'Entrar'}
+            {submitting ? 'Entrando…' : 'Iniciar sesión'}
           </Button>
         </div>
       </form>
+      <p className={styles.divider}><span>o</span></p>
+      <div className={styles.google}>
+        <GoogleButton onCredential={google.onCredential} onError={google.onError} />
+      </div>
       <p className={styles.footnote}>
-        ¿Aún no tienes cuenta?{' '}
+        <span>¿Todavía no tienes una cuenta?</span>
         <button type="button" className={styles.link} onClick={() => navigate('/registro')}>
-          Regístrate
+          Regístrate aquí <span aria-hidden="true">→</span>
         </button>
       </p>
     </AuthLayout>

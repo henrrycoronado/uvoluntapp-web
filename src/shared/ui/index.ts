@@ -28,4 +28,4 @@ export { BrandBanner } from './BrandBanner'
 
 export { ConfirmButton } from './ConfirmButton'
 export type { ConfirmButtonProps } from './ConfirmButton'
-export { ImageField, validateImage } from './ImageField/ImageField'
+export { ImageField, ProtectedImage, uploadImage, useProtectedImage, validateImage } from './ImageField/ImageField'

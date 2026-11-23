@@ -54,6 +54,8 @@ export function CreatePasswordPage() {
 
   return (
     <AuthLayout
+      variant="register"
+      eyebrow="Tu cuenta con Google"
       title="Crea tu contraseña"
       description="Tu cuenta se creó con Google. Te enviamos un código por correo para que también puedas entrar con contraseña."
     >

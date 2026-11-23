@@ -1,8 +1,9 @@
 import { type FormEvent, useState } from 'react'
 import { navigate } from '../../../app/navigation'
 import { ApiError } from '../../../shared/api/http'
-import { Button, TextField } from '../../../shared/ui'
+import { Button } from '../../../shared/ui'
 import { AuthLayout } from '../AuthLayout'
+import { CodeBoxes } from '../CodeBoxes'
 import { ResendCode } from '../ResendCode'
 import { authApi } from '../api'
 import styles from '../auth.module.css'
@@ -54,7 +55,12 @@ export function OtpPage() {
   }
 
   return (
-    <AuthLayout title="Verifica tu correo" description="Escribe el código de 6 dígitos que enviamos a tu correo. Vence en 10 minutos.">
+    <AuthLayout
+      variant="register"
+      eyebrow="Verificación de correo"
+      title="Confirma tu correo"
+      description="Enviamos un código de seis dígitos al correo indicado después de validar tu formulario de registro manual."
+    >
       <p className={styles.description}>
         Correo: <span className={styles.email}>{email}</span>
       </p>
@@ -64,20 +70,12 @@ export function OtpPage() {
         </p>
       )}
       <form className={styles.form} onSubmit={onSubmit} noValidate>
-        <TextField
-          label="Código"
-          name="code"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={6}
-          value={code}
-          onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-          autoFocus
-          required
-        />
+        <p className={styles.codeLabel}>Código de verificación</p>
+        <CodeBoxes label="Código de verificación" value={code} onChange={setCode} />
+        <p className={styles.help}>El código es de un solo uso y caduca en 10 minutos. No lo compartas.</p>
         <div className={styles.actions}>
           <Button type="submit" variant="primary" size="lg" disabled={submitting || code.length !== 6}>
-            {submitting ? 'Verificando…' : 'Verificar'}
+            {submitting ? 'Verificando…' : 'Verificar código'}
           </Button>
         </div>
       </form>
