@@ -55,6 +55,26 @@ export function readPendingEmail(): string {
   return read(PENDING_KEY) ?? ''
 }
 
+/** Token de Google en espera de los datos de contacto que faltan (dura la pestaña, nunca el disco). */
+const GOOGLE_KEY = 'uvoluntapp.pending-google'
+
+export function setPendingGoogleToken(token: string | null): void {
+  try {
+    if (token) sessionStorage.setItem(GOOGLE_KEY, token)
+    else sessionStorage.removeItem(GOOGLE_KEY)
+  } catch {
+    /* sin almacenamiento: el formulario pedirá volver a entrar con Google */
+  }
+}
+
+export function readPendingGoogleToken(): string {
+  try {
+    return sessionStorage.getItem(GOOGLE_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
 export interface PendingNames {
   firstName: string
   lastName: string

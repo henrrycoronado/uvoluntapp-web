@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { navigate, usePathname } from './app/navigation'
+import { CompleteGoogleProfilePage } from './features/auth/screens/CompleteGoogleProfilePage'
 import { CompleteRegistrationPage } from './features/auth/screens/CompleteRegistrationPage'
 import { CreatePasswordPage } from './features/auth/screens/CreatePasswordPage'
 import { ForgotPasswordPage } from './features/auth/screens/ForgotPasswordPage'
@@ -31,6 +32,7 @@ export default function App() {
     '/registro',
     '/verificar',
     '/completar-registro',
+    '/completar-perfil',
     '/crear-contrasena',
     '/recuperar',
     '/nueva-solicitud',
@@ -49,6 +51,8 @@ export default function App() {
       return <OtpPage />
     case '/completar-registro':
       return <CompleteRegistrationPage />
+    case '/completar-perfil':
+      return <CompleteGoogleProfilePage />
     case '/crear-contrasena':
       return <CreatePasswordPage />
     case '/recuperar':

@@ -1,23 +1,29 @@
 import { useCallback, useState } from 'react'
 import { navigate } from '../../app/navigation'
 import { ApiError } from '../../shared/api/http'
-import { authApi } from './api'
+import { authApi, type GoogleProfile } from './api'
 import { commonMessage } from './messages'
-import { setPendingEmail, setPendingNames, writeSession } from './session'
+import { setPendingEmail, setPendingGoogleToken, setPendingNames, writeSession } from './session'
 
 /** Resultado del acceso con Google: sesión, datos de aprobación pendientes o cuenta en revisión. */
 export function useGoogleSignIn() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
-  const onCredential = useCallback(async (idToken: string) => {
+  const onCredential = useCallback(async (idToken: string, profile?: GoogleProfile) => {
     setError(null)
     setNotice(null)
     try {
-      const result = await authApi.google(idToken)
+      const result = await authApi.google(idToken, profile)
       if (result.tokens) {
+        setPendingGoogleToken(null)
         writeSession(result.tokens)
         navigate('/inicio')
+      } else if (result.requiresProfileData) {
+        // Cuenta institucional nueva sin teléfono: se completan los datos y se repite la solicitud con el mismo token.
+        setPendingGoogleToken(idToken)
+        setPendingNames({ firstName: result.firstName ?? '', lastName: result.lastName ?? '' })
+        navigate('/completar-perfil')
       } else if (result.requiresApprovalData) {
         setPendingEmail(result.email)
         setPendingNames({ firstName: result.firstName ?? '', lastName: result.lastName ?? '' })

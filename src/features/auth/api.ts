@@ -23,6 +23,14 @@ export interface GoogleAuthResult {
   requiresApprovalData: boolean
   firstName?: string | null
   lastName?: string | null
+  /** Alta institucional con Google: faltan nombres o teléfono antes de emitir sesión. */
+  requiresProfileData?: boolean
+}
+
+export interface GoogleProfile {
+  firstName: string
+  lastName: string
+  phone: string
 }
 
 export interface ApprovalData {
@@ -43,8 +51,8 @@ interface Message {
 }
 
 export const authApi = {
-  google: (idToken: string) =>
-    request<GoogleAuthResult>('/auth/google', { method: 'POST', body: { idToken } }),
+  google: (idToken: string, profile?: GoogleProfile) =>
+    request<GoogleAuthResult>('/auth/google', { method: 'POST', body: { idToken, ...profile } }),
 
   register: (input: RegisterInput) =>
     request<Message>('/auth/register', { method: 'POST', body: input }),
