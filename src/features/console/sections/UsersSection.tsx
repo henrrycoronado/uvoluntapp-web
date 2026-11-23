@@ -69,13 +69,6 @@ export function UsersSection({ token, access }: { token: string; access: Access 
                   <td>{user.verifiedAt ? 'Verificada' : 'Sin verificar'}</td>
                   {canEdit && (
                     <td className={styles.actions}>
-                      {user.accountStatus === 'ACTIVE' && !user.verifiedAt && (
-                        <ConfirmButton
-                          label="Verificar"
-                          confirmLabel="Confirmar verificación"
-                          onConfirm={() => run(() => consoleApi.users.verify(token, user.id), 'Cuenta verificada.', reload)}
-                        />
-                      )}
                       {(user.accountStatus === 'ACTIVE' || user.accountStatus === 'SUSPENDED') && (
                         <ChangeEmailAction
                           currentEmail={user.email}
