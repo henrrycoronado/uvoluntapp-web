@@ -7,7 +7,9 @@ import { activityStatusLabels, formatSchedule, fromLocalInput, modalityLabels, t
 import planning from '../../planning/planning.module.css'
 import { consoleApi } from '../api'
 import styles from '../console.module.css'
+import { EnrollmentList } from './EnrollmentList'
 import { Feedback } from './Feedback'
+import { ParticipationForm } from './ParticipationForm'
 import { Field } from './Field'
 import { ReasonAction } from './ReasonAction'
 import { useAction } from './useAction'
@@ -124,6 +126,8 @@ export function ActivityDetail({ token, activity: a, can, programs, periods, onC
         <p className={styles.muted}>Para publicar, el programa debe estar activo y la actividad tener lugar o enlace según su modalidad.</p>
       )}
 
+      {manage && a.status === 'DRAFT' && !editing && <ParticipationForm key={`part-${a.id}-${a.participation.groups.length}`} token={token} activity={a} onSaved={onChanged} />}
+      {manage && a.requiresRegistration && a.status !== 'DRAFT' && <EnrollmentList token={token} activity={a} />}
       {manage && a.status === 'PUBLISHED' && !editing && <RescheduleForm key={`form-${a.startsAt}`} token={token} activity={a} onDone={onChanged} report={run} />}
       <RescheduleHistory key={`history-${a.startsAt}`} token={token} activityId={a.id} />
       {manage && <Delegations key={a.programId ?? 'libre'} token={token} activity={a} can={can} />}
