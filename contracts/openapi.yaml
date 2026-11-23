@@ -2929,14 +2929,18 @@ components:
         email:
           type: string
           format: email
+          maxLength: 256
         password:
           type: string
           format: password
           minLength: 8
+          maxLength: 128
         firstName:
           type: string
+          maxLength: 100
         lastName:
           type: string
+          maxLength: 100
         phone:
           type: string
           maxLength: 30
@@ -2997,15 +3001,20 @@ components:
         email:
           type: string
           format: email
+          maxLength: 256
         firstName:
           type: string
+          maxLength: 100
         lastName:
           type: string
+          maxLength: 100
         phone:
           type: string
+          maxLength: 30
         relationWithPastoral:
           type: string
           description: Relación con la Pastoral Universitaria
+          maxLength: 200
       required:
         - email
         - firstName
@@ -3019,9 +3028,11 @@ components:
         email:
           type: string
           format: email
+          maxLength: 256
         password:
           type: string
           format: password
+          maxLength: 128
       required:
         - email
         - password
@@ -3127,18 +3138,23 @@ components:
         email:
           type: string
           format: email
+          maxLength: 256
         password:
           type: string
           format: password
+          maxLength: 128
         firstName:
           type: string
+          maxLength: 100
         lastName:
           type: string
+          maxLength: 100
         phone:
           type: string
           maxLength: 30
         relationWithPastoral:
           type: string
+          maxLength: 200
       required: [email, password, firstName, lastName, phone, relationWithPastoral]
 
     SetPasswordRequest:
@@ -3147,6 +3163,7 @@ components:
         email:
           type: string
           format: email
+          maxLength: 256
         code:
           type: string
           pattern: '^[0-9]{6}$'
@@ -3154,6 +3171,7 @@ components:
           type: string
           format: password
           minLength: 8
+          maxLength: 128
       required:
         - email
         - code
@@ -3189,6 +3207,7 @@ components:
           type: string
           format: password
           minLength: 8
+          maxLength: 128
       required:
         - token
         - newPassword
@@ -3505,11 +3524,14 @@ components:
       properties:
         firstName:
           type: string
+          maxLength: 100
         lastName:
           type: string
+          maxLength: 100
         phone:
           type: string
           nullable: true
+          maxLength: 30
 
     ChangeEmailRequest:
       type: object
