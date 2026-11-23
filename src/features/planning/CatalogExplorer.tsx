@@ -4,8 +4,9 @@ import { Button } from '../../shared/ui'
 import { describe } from '../console/sections/useAction'
 import { ActivityCalendar } from './ActivityCalendar'
 import { planningApi, type CatalogActivity, type CatalogProgram, type Enrollment, type Period } from './api'
-import { EnrollmentPanel } from './EnrollmentPanel'
-import { activityPlace, activityStatusLabels, dayRange, formatSchedule, modalityLabels } from './format'
+import { ActivityDetailView } from './ActivityDetailView'
+import detail from './detail.module.css'
+import { activityPlace, activityStatusLabels, dayRange, formatSchedule } from './format'
 import consoleStyles from '../console/console.module.css'
 import styles from './planning.module.css'
 
@@ -62,14 +63,26 @@ const FREE = '__libres__'
  * Actividades publicadas o en ejecución, en lista o calendario con los mismos filtros (SCRUM-52).
  * Las de programa se agrupan por programa; las libres, por su etiqueta de grupo.
  */
-export function CatalogActivities({ initialProgramId, token, onLogin }: { initialProgramId?: string; token?: string; onLogin?: () => void }) {
+interface CatalogActivitiesProps {
+  initialProgramId?: string
+  token?: string
+  onLogin?: () => void
+  /** Actividad abierta: si el padre la controla (por ejemplo desde "Mis inscripciones") se recibe aquí. */
+  openId?: string | null
+  onOpenChange?: (id: string | null) => void
+}
+
+export function CatalogActivities({ initialProgramId, token, onLogin, openId, onOpenChange }: CatalogActivitiesProps) {
   const [periodId, setPeriodId] = useState('')
   const [programId, setProgramId] = useState(initialProgramId ?? '')
   const [status, setStatus] = useState<'' | 'PUBLISHED' | 'IN_PROGRESS'>('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [view, setView] = useState<'list' | 'calendar'>('list')
-  const [open, setOpen] = useState<string | null>(null)
+  const [innerOpen, setInnerOpen] = useState<string | null>(null)
+  const controlled = onOpenChange !== undefined
+  const open = controlled ? (openId ?? null) : innerOpen
+  const setOpen = (id: string | null) => (controlled ? onOpenChange(id) : setInnerOpen(id))
 
   useEffect(() => setProgramId(initialProgramId ?? ''), [initialProgramId])
 
@@ -101,6 +114,21 @@ export function CatalogActivities({ initialProgramId, token, onLogin }: { initia
     }
     return [...map.entries()]
   }, [activities])
+
+  if (open) {
+    return (
+      <OpenedActivity
+        id={open}
+        known={activities.status === 'ready' ? activities.data.items : []}
+        periods={periods.status === 'ready' ? periods.data : []}
+        token={token}
+        mine={enrollments}
+        onLogin={onLogin}
+        onChanged={() => setVersion((v) => v + 1)}
+        onBack={() => setOpen(null)}
+      />
+    )
+  }
 
   return (
     <div className={styles.group}>
@@ -154,49 +182,25 @@ export function CatalogActivities({ initialProgramId, token, onLogin }: { initia
         groups.map(([title, items]) => (
           <section key={title} className={styles.group} aria-label={title}>
             <h3 className={styles.groupTitle}>{title}</h3>
-            <ul className={styles.list}>
+            <ul className={detail.cards}>
               {items.map((a) => (
-                <li key={a.id}>
-                  <button
-                    type="button"
-                    className={open === a.id ? styles.itemSelected : styles.itemButton}
-                    aria-expanded={open === a.id}
-                    onClick={() => setOpen(open === a.id ? null : a.id)}
-                  >
-                    <span className={styles.itemHead}>
-                      <span className={styles.itemTitle}>{a.title}</span>
-                      <span className={a.status === 'IN_PROGRESS' ? styles.chipLive : styles.chip}>{activityStatusLabels[a.status]}</span>
-                    </span>
-                    <span className={styles.meta}>
-                      <span>{formatSchedule(a.startsAt, a.endsAt)}</span>
-                      <span>{activityPlace(a)}</span>
-                      <span>{a.requiresRegistration ? (a.capacity ? `Cupo: ${a.capacity}` : 'Requiere registro previo') : 'Sin registro previo'}</span>
-                    </span>
-                  </button>
-                  {open === a.id && (
-                    <div className={styles.group}>
-                      {a.imageUrl && <img src={imageSrc(a.imageUrl, false)} alt={`Imagen de ${a.title}`} loading="lazy" style={{ maxWidth: '100%', borderRadius: '0.5rem' }} />}
-                      {a.description && <p className={styles.meta}>{a.description}</p>}
-                      <dl className={styles.facts}>
-                        <div><dt>Modalidad</dt><dd>{modalityLabels[a.modality]}</dd></div>
-                        {a.expectedHours != null && <div><dt>Horas previstas</dt><dd>{a.expectedHours} h (informativas)</dd></div>}
-                        {a.participationConditions && <div><dt>Condiciones</dt><dd>{a.participationConditions}</dd></div>}
-                        {a.participation.groups.length > 0 && (
-                          <div>
-                            <dt>Turnos</dt>
-                            <dd>
-                              <ul>
-                                {a.participation.groups.map((g) => (
-                                  <li key={g.id}>{g.name} · {formatSchedule(g.startsAt, g.endsAt)}{g.capacity != null ? ` · cupo ${g.capacity}` : ''}</li>
-                                ))}
-                              </ul>
-                            </dd>
-                          </div>
-                        )}
-                      </dl>
-                      <EnrollmentPanel activity={a} token={token} mine={enrollments} onLogin={onLogin} onChanged={() => setVersion((v) => v + 1)} />
-                    </div>
+                <li key={a.id} className={detail.row}>
+                  {a.imageUrl ? (
+                    <img className={detail.thumb} src={imageSrc(a.imageUrl)} alt="" loading="lazy" />
+                  ) : (
+                    <span className={detail.thumbEmpty} aria-hidden="true" />
                   )}
+                  <div className={detail.rowMeta}>
+                    <h4 className={detail.rowTitle}>{a.title}</h4>
+                    <span>{formatSchedule(a.startsAt, a.endsAt)} · {activityPlace(a)}</span>
+                    <span>{a.requiresRegistration ? (a.participation.groups.length > 0 ? 'Con inscripción previa por grupo' : a.capacity ? `Cupo: ${a.capacity}` : 'Requiere registro previo') : 'Sin registro previo'}</span>
+                  </div>
+                  <div className={detail.rowSide}>
+                    <span className={a.status === 'IN_PROGRESS' ? styles.chipLive : styles.chip}>{activityStatusLabels[a.status]}</span>
+                    <button type="button" className={detail.link} onClick={() => setOpen(a.id)} aria-label={`Ver actividad ${a.title}`}>
+                      Ver actividad →
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -206,3 +210,44 @@ export function CatalogActivities({ initialProgramId, token, onLogin }: { initia
   )
 }
 
+
+/** Carga la actividad abierta (aunque ya no esté en la lista filtrada) y muestra su detalle. */
+function OpenedActivity({ id, known, periods, token, mine, onLogin, onChanged, onBack }: {
+  id: string
+  known: CatalogActivity[]
+  periods: Period[]
+  token?: string
+  mine: Enrollment[]
+  onLogin?: () => void
+  onChanged: () => void
+  onBack: () => void
+}) {
+  const [version, setVersion] = useState(0)
+  const loaded = useCatalog<CatalogActivity>(() => planningApi.catalog.activity(id), [id, version])
+  const activity = loaded.status === 'ready' ? loaded.data : known.find((a) => a.id === id)
+
+  if (!activity) {
+    return loaded.status === 'error' ? (
+      <div className={styles.group}>
+        <button type="button" className={detail.back} onClick={onBack}>← Actividades disponibles</button>
+        <p role="alert" className={styles.warnings}>{loaded.message}</p>
+      </div>
+    ) : (
+      <p className={styles.hint}>Cargando actividad…</p>
+    )
+  }
+  return (
+    <ActivityDetailView
+      activity={activity}
+      periodLabel={periods.find((p) => p.id === activity.periodId)?.label}
+      token={token}
+      mine={mine}
+      onLogin={onLogin}
+      onChanged={() => {
+        setVersion((v) => v + 1)
+        onChanged()
+      }}
+      onBack={onBack}
+    />
+  )
+}

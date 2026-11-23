@@ -27,6 +27,12 @@
   --color-error-muted: #b91c1c;
   --color-error-bg: rgba(239, 68, 68, 0.1);
 
+  /* Estados sobre superficies: texto y fondo con contraste en ambos temas (enlaces, chips y avisos). */
+  --color-success-text: #4ade80;
+  --color-success-bg: rgba(34, 197, 94, 0.14);
+  --color-warning-text: #fbbf24;
+  --color-warning-bg: rgba(245, 158, 11, 0.14);
+
   --color-focus-ring: rgba(255, 193, 0, 0.5);
 
   /* ── Typography ── */
@@ -115,4 +121,8 @@ html {
   --color-text-on-accent: #1e1e1e;
   --color-error-bg: rgba(185, 28, 28, 0.08);
   --color-error: #b91c1c;
+  --color-success-text: #15803d;
+  --color-success-bg: #dcf3e4;
+  --color-warning-text: #8a5300;
+  --color-warning-bg: #fdf0cc;
 }

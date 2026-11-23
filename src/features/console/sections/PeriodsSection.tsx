@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { Button, ConfirmButton } from '../../../shared/ui'
 import { planningApi, type Period } from '../../planning/api'
+import detail from '../../planning/detail.module.css'
 import styles from '../console.module.css'
 import { Feedback } from './Feedback'
 import { Field } from './Field'
@@ -9,12 +10,18 @@ import { useLoad } from './useLoad'
 
 const date = new Intl.DateTimeFormat('es-BO', { dateStyle: 'medium' })
 
-/** Sugerencia para el sucesor: "2026-2" pasa a "2027-1" y "2027-1" a "2027-2". Es solo un punto de partida editable. */
+/**
+ * Sugerencia para el sucesor. El sistema usa códigos como "2026-II": el primer semestre pasa al segundo del mismo año
+ * y el segundo al primero del año siguiente. También entiende "2026-2". Es solo un punto de partida editable.
+ */
 export function suggestSuccessor(label: string): string {
-  const match = /^(\d{4})-([12])$/.exec(label.trim())
+  const match = /^(\d{4})-(I{1,2}|[12])$/i.exec(label.trim())
   if (!match) return ''
   const year = Number(match[1])
-  return match[2] === '1' ? `${year}-2` : `${year + 1}-1`
+  const roman = /^I/i.test(match[2])
+  const first = match[2] === '1' || match[2].toUpperCase() === 'I'
+  const term = (n: 1 | 2) => (roman ? (n === 1 ? 'I' : 'II') : String(n))
+  return first ? `${year}-${term(2)}` : `${year + 1}-${term(1)}`
 }
 
 /** Periodos académicos: solo el ADMIN edita el activo y lo cierra abriendo el sucesor en una sola operación. */
@@ -58,46 +65,66 @@ function ActivePeriod({ token, period, run, onChanged }: { token: string; period
 
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!label.trim()) return setError('El nombre del periodo es obligatorio.')
-    if (endDate && endDate < period.startDate.slice(0, 10)) return setError('El fin no puede ser anterior al inicio.')
+    if (!label.trim()) return setError('El código del periodo es obligatorio.')
+    if (endDate && endDate < period.startDate.slice(0, 10)) return setError('La fecha final no puede ser anterior al inicio.')
     setError(null)
     void run(() => planningApi.academicPeriods.edit(token, period.id, { label: label.trim(), endDate: endDate || null }), 'Periodo actualizado.', onChanged)
   }
 
   const successorInvalid = !successor.trim() || successor.trim().toLowerCase() === label.trim().toLowerCase()
 
+  // Disposición del prototipo "Cierre y apertura de período": tarjetas a la izquierda y validaciones a la derecha.
   return (
-    <>
-      <section aria-label="Periodo activo">
-        <h2 className={styles.subheading}>Periodo activo: {period.label}</h2>
-        <p className={styles.muted}>Desde {date.format(new Date(period.startDate))}. Toda actividad nueva nace en este periodo.</p>
-        <form className={styles.formRow} onSubmit={save} noValidate>
-          <Field label="Nombre">{(id) => <input id={id} className={styles.select} value={label} maxLength={50} onChange={(e) => setLabel(e.target.value)} />}</Field>
-          <Field label="Fin previsto (opcional)">{(id) => <input id={id} type="date" className={styles.select} value={endDate} onChange={(e) => setEndDate(e.target.value)} />}</Field>
-          <Button type="submit" variant="secondary">Guardar</Button>
-        </form>
-        {error && <p role="alert" className={styles.alert}>{error}</p>}
-      </section>
+    <div className={detail.layout}>
+      <div className={detail.stack}>
+        <section className={detail.card} aria-labelledby="active-period">
+          <h2 id="active-period" className={detail.cardTitle}>Período académico activo</h2>
+          <p className={detail.hint}>Los períodos son recursos globales, con un único ACTIVE.</p>
+          <form onSubmit={save} noValidate className={detail.stack}>
+            <div className={detail.facts}>
+              <Field label="Código único">{(id) => <input id={id} className={styles.select} value={label} maxLength={50} onChange={(e) => setLabel(e.target.value)} />}</Field>
+              <Field label="Estado">{(id) => <input id={id} className={styles.select} value="ACTIVE" readOnly />}</Field>
+              <Field label="Inicio">{(id) => <input id={id} className={styles.select} value={date.format(new Date(period.startDate))} readOnly />}</Field>
+              <Field label="Fecha final">{(id) => <input id={id} type="date" className={styles.select} value={endDate} onChange={(e) => setEndDate(e.target.value)} />}</Field>
+            </div>
+            <p className={detail.hint}>La fecha final es opcional y no debe ser anterior al inicio.</p>
+            {error && <p role="alert" className={styles.alert}>{error}</p>}
+            <div className={styles.actions}>
+              <Button type="submit" variant="secondary">Guardar cambios</Button>
+            </div>
+          </form>
+        </section>
 
-      <section aria-label="Cierre del periodo">
-        <h2 className={styles.subheading}>Cerrar periodo</h2>
-        <p className={styles.muted}>
-          El cierre es manual y abre el sucesor en una sola operación. Se bloquea si quedan actividades en borrador, publicadas o en curso.
-        </p>
-        <div className={styles.formRow}>
-          <Field label="Nombre del periodo sucesor">
-            {(id) => <input id={id} className={styles.select} value={successor} maxLength={50} placeholder="Ej.: 2027-1" onChange={(e) => setSuccessor(e.target.value)} />}
-          </Field>
-          <ConfirmButton
-            label="Cerrar periodo"
-            confirmLabel="Confirmar cierre"
-            variant="danger"
-            disabled={successorInvalid}
-            onConfirm={() => run(() => planningApi.academicPeriods.close(token, period.id, successor.trim()), `Periodo cerrado. Ahora está activo ${successor.trim()}.`, onChanged)}
-          />
-        </div>
-        {successorInvalid && <p className={styles.muted}>Escribe un nombre distinto al del periodo actual.</p>}
-      </section>
-    </>
+        <section className={detail.card} aria-label="Cierre del periodo">
+          <h2 className={detail.cardTitle}>Cierre y sucesión</h2>
+          <p className={detail.hint}>Revisión transaccional antes de cerrar y generar el siguiente período.</p>
+          <div className={detail.facts}>
+            <Field label="Código sucesor">
+              {(id) => <input id={id} className={styles.select} value={successor} maxLength={50} placeholder="Ej.: 2027-I" onChange={(e) => setSuccessor(e.target.value)} />}
+            </Field>
+            <Field label="Inicio sucesor">{(id) => <input id={id} className={styles.select} value="Día de cierre" readOnly />}</Field>
+            <Field label="Fin sucesor">{(id) => <input id={id} className={styles.select} value="Sin fecha (NULL)" readOnly />}</Field>
+            <Field label="Actividades en ejecución">{(id) => <input id={id} className={styles.select} value="Debe ser 0" readOnly />}</Field>
+          </div>
+          {successorInvalid && <p className={detail.hint}>Escribe un código distinto al del periodo actual.</p>}
+          <div className={styles.actions}>
+            <ConfirmButton
+              label="Cerrar y abrir sucesor"
+              confirmLabel="Confirmar cierre"
+              variant="primary"
+              disabled={successorInvalid}
+              onConfirm={() => run(() => planningApi.academicPeriods.close(token, period.id, successor.trim()), `Periodo cerrado. Ahora está activo ${successor.trim()}.`, onChanged)}
+            />
+          </div>
+        </section>
+      </div>
+
+      <aside className={detail.card} aria-label="Validaciones">
+        <h2 className={detail.cardTitle}>Validaciones</h2>
+        <p className={detail.hint}>No se permite cerrar mientras existan actividades en borrador, publicadas o en ejecución, revisiones y evaluaciones pendientes.</p>
+        <p className={detail.hint}>El cierre y la creación del sucesor ACTIVE son una única transacción.</p>
+        <p className={detail.hint}>Los períodos cerrados y sus relaciones históricas son inmutables.</p>
+      </aside>
+    </div>
   )
 }

@@ -2821,6 +2821,14 @@ components:
           type: string
           format: date-time
           nullable: true
+        participantName:
+          type: string
+          nullable: true
+          description: Solo en la lista de inscripciones de una actividad, para quien la gestiona.
+        participantEmail:
+          type: string
+          nullable: true
+          description: Solo en la lista de inscripciones de una actividad, para quien la gestiona.
       required:
       - id
       - userId

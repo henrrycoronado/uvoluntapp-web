@@ -56,3 +56,10 @@ export function dayRange(from: string, to: string): { fromDate?: string; toDate?
     toDate: to ? new Date(`${to}T23:59:59`).toISOString() : undefined,
   }
 }
+
+const longDateTime = new Intl.DateTimeFormat('es-BO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+/** "28 nov 2026, 09:00": fecha y hora completas, como las muestra el prototipo. */
+export function formatDateTime(iso: string): string {
+  return longDateTime.format(new Date(iso))
+}

@@ -11,6 +11,8 @@ describe('PeriodsSection', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('sugiere el nombre del sucesor', () => {
+    expect(suggestSuccessor('2026-II')).toBe('2027-I')
+    expect(suggestSuccessor('2027-I')).toBe('2027-II')
     expect(suggestSuccessor('2026-2')).toBe('2027-1')
     expect(suggestSuccessor('2027-1')).toBe('2027-2')
     expect(suggestSuccessor('Otoño')).toBe('')
@@ -23,9 +25,9 @@ describe('PeriodsSection', () => {
     vi.stubGlobal('fetch', fetchMock)
     render(<PeriodsSection token="t" />)
 
-    expect(await screen.findByText(/Periodo activo: 2026-2/)).toBeInTheDocument()
+    expect(await screen.findByText(/Período académico activo/)).toBeInTheDocument()
     expect(screen.getByText(/2026-1/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Cerrar periodo' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar y abrir sucesor' }))
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar cierre' }))
 
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/academic-periods/p1/close'))).toBe(true))
@@ -36,9 +38,9 @@ describe('PeriodsSection', () => {
   it('no permite un sucesor con el mismo nombre', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(periods))))
     render(<PeriodsSection token="t" />)
-    await screen.findByText(/Periodo activo/)
-    fireEvent.change(screen.getByLabelText('Nombre del periodo sucesor'), { target: { value: '2026-2' } })
-    expect(screen.getByRole('button', { name: 'Cerrar periodo' })).toBeDisabled()
+    await screen.findByText(/Período académico activo/)
+    fireEvent.change(screen.getByLabelText('Código sucesor'), { target: { value: '2026-2' } })
+    expect(screen.getByRole('button', { name: 'Cerrar y abrir sucesor' })).toBeDisabled()
   })
 
   it('muestra el motivo cuando el servidor bloquea el cierre', async () => {
@@ -48,8 +50,8 @@ describe('PeriodsSection', () => {
         : new Response(JSON.stringify(periods)),
     ))
     render(<PeriodsSection token="t" />)
-    await screen.findByText(/Periodo activo/)
-    fireEvent.click(screen.getByRole('button', { name: 'Cerrar periodo' }))
+    await screen.findByText(/Período académico activo/)
+    fireEvent.click(screen.getByRole('button', { name: 'Cerrar y abrir sucesor' }))
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar cierre' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Hay actividades en borrador.')
   })

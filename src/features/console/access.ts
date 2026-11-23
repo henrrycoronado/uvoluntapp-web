@@ -3,9 +3,10 @@ import type { Capabilities } from '../../shared/session/capabilities'
 /** edit: gestiona · review: solo consulta · none: no ve la sección. */
 export type Access = 'edit' | 'review' | 'none'
 
-export type Feature = 'Resumen' | 'Personas y accesos' | 'Programas' | 'Participación' | 'Gestión'
+export type Feature = 'Principal' | 'Planificación' | 'Participación' | 'Seguimiento' | 'Administración'
 
-export const featureOrder: Feature[] = ['Resumen', 'Personas y accesos', 'Programas', 'Participación', 'Gestión']
+/** Grupos del menú como en el prototipo de la consola. */
+export const featureOrder: Feature[] = ['Principal', 'Planificación', 'Participación', 'Seguimiento', 'Administración']
 
 export interface SectionDefinition {
   id: string
@@ -27,9 +28,9 @@ const managersEditOperativeReviews = (can: Capabilities): Access =>
 export const sections: SectionDefinition[] = [
   {
     id: 'resumen',
-    title: 'Resumen',
+    title: 'Inicio',
     summary: 'Lo que requiere tu atención hoy.',
-    feature: 'Resumen',
+    feature: 'Principal',
     live: true,
     access: (can) => (can.canOpenConsole ? 'review' : 'none'),
   },
@@ -37,15 +38,15 @@ export const sections: SectionDefinition[] = [
     id: 'usuarios',
     title: 'Usuarios',
     summary: 'Cuentas registradas, su estado y bajas.',
-    feature: 'Personas y accesos',
+    feature: 'Administración',
     live: true,
     access: (can) => (can.isAdmin ? 'edit' : can.isProgramLeader || can.isOperationalLeader ? 'review' : 'none'),
   },
   {
     id: 'aprobaciones',
-    title: 'Aprobación de cuentas',
+    title: 'Solicitudes externas',
     summary: 'Solicitudes de personas con correo externo.',
-    feature: 'Personas y accesos',
+    feature: 'Administración',
     live: true,
     access: (can) => (can.isAdmin ? 'edit' : 'none'),
   },
@@ -53,7 +54,7 @@ export const sections: SectionDefinition[] = [
     id: 'asignaciones',
     title: 'Roles y permisos',
     summary: 'Quién lidera cada programa y quién apoya como operativo.',
-    feature: 'Personas y accesos',
+    feature: 'Administración',
     live: true,
     access: (can) => (can.isAdmin || can.isProgramLeader ? 'edit' : can.isOperationalLeader ? 'review' : 'none'),
   },
@@ -61,15 +62,15 @@ export const sections: SectionDefinition[] = [
     id: 'administradores',
     title: 'Administradores',
     summary: 'Promociones a administrador con doble aprobación.',
-    feature: 'Personas y accesos',
+    feature: 'Administración',
     live: true,
     access: (can) => (can.isAdmin ? 'edit' : 'none'),
   },
   {
     id: 'auditoria',
-    title: 'Auditoría',
+    title: 'Trazabilidad',
     summary: 'Registro de operaciones sensibles.',
-    feature: 'Personas y accesos',
+    feature: 'Administración',
     live: true,
     access: (can) => (can.isAdmin ? 'review' : 'none'),
   },
@@ -77,7 +78,7 @@ export const sections: SectionDefinition[] = [
     id: 'programas',
     title: 'Programas',
     summary: 'Programas que gestionas y los que puedes consultar.',
-    feature: 'Programas',
+    feature: 'Planificación',
     live: true,
     access: managersEditOperativeReviews,
   },
@@ -85,23 +86,23 @@ export const sections: SectionDefinition[] = [
     id: 'actividades',
     title: 'Actividades',
     summary: 'Calendario, cupos y estados de cada actividad.',
-    feature: 'Programas',
+    feature: 'Planificación',
     live: true,
     access: managersEditOperativeReviews,
   },
   {
     id: 'agregacion',
-    title: 'Agregación a programas',
+    title: 'Equipo del programa',
     summary: 'Equipo de líderes de cada programa y sus delegaciones.',
-    feature: 'Programas',
+    feature: 'Planificación',
     live: true,
     access: managersEditOperativeReviews,
   },
   {
     id: 'periodos',
-    title: 'Periodos',
+    title: 'Períodos',
     summary: 'Periodo académico activo, cierre y apertura del siguiente.',
-    feature: 'Programas',
+    feature: 'Planificación',
     live: true,
     access: (can) => (can.isAdmin ? 'edit' : 'none'),
   },
@@ -115,7 +116,7 @@ export const sections: SectionDefinition[] = [
   },
   {
     id: 'registros',
-    title: 'Registros',
+    title: 'Asistencias',
     summary: 'Entradas y salidas en actividades activas.',
     feature: 'Participación',
     live: false,
@@ -130,7 +131,7 @@ export const sections: SectionDefinition[] = [
     id: 'compromisos',
     title: 'Compromisos',
     summary: 'Horas comprometidas por voluntario.',
-    feature: 'Participación',
+    feature: 'Seguimiento',
     live: false,
     module: 'Módulo 4',
     plans: { edit: ['Definir y ajustar compromisos de horas'], review: ['Consultar avance de compromisos'] },
@@ -140,7 +141,7 @@ export const sections: SectionDefinition[] = [
     id: 'seguimientos',
     title: 'Seguimientos',
     summary: 'Acompañamiento de cada voluntario.',
-    feature: 'Participación',
+    feature: 'Seguimiento',
     live: false,
     module: 'Módulo 4',
     plans: { edit: ['Registrar observaciones y acuerdos'], review: ['Consultar el historial de acompañamiento'] },
@@ -148,9 +149,9 @@ export const sections: SectionDefinition[] = [
   },
   {
     id: 'planificacion',
-    title: 'Planificación',
+    title: 'Asistente IA',
     summary: 'Planes de trabajo por periodo académico.',
-    feature: 'Gestión',
+    feature: 'Planificación',
     live: false,
     module: 'Módulo 4',
     plans: { edit: ['Planificar periodos y metas por programa'], review: ['Consultar planes vigentes'] },
@@ -160,7 +161,7 @@ export const sections: SectionDefinition[] = [
     id: 'reportes',
     title: 'Reportes e IA',
     summary: 'Reportes de participación y asistentes de IA.',
-    feature: 'Gestión',
+    feature: 'Administración',
     live: false,
     module: 'Módulo 5',
     plans: { edit: ['Generar reportes por programa y periodo', 'Usar asistentes de IA para análisis'], review: [] },
@@ -168,9 +169,9 @@ export const sections: SectionDefinition[] = [
   },
   {
     id: 'financiero',
-    title: 'Financiero',
+    title: 'Presupuestos',
     summary: 'Presupuestos y gastos por programa.',
-    feature: 'Gestión',
+    feature: 'Seguimiento',
     live: false,
     module: 'Módulo 6',
     plans: { edit: ['Registrar presupuestos y gastos'], review: ['Consultar el estado financiero de tus programas'] },

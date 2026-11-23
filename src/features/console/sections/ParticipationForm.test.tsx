@@ -49,13 +49,13 @@ describe('ParticipationForm', () => {
     const onSaved = vi.fn()
     render(<ParticipationForm token="t" activity={activity} onSaved={onSaved} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Agregar turno' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Guardar participación' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Agregar grupo' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar grupos' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/nombre/)
     expect(fetchMock).not.toHaveBeenCalled()
 
-    await userEvent.type(screen.getByLabelText('Nombre del turno 1'), 'Mañana')
-    await userEvent.click(screen.getByRole('button', { name: 'Guardar participación' }))
+    await userEvent.type(screen.getByLabelText('Nombre del grupo 1'), 'Mañana')
+    await userEvent.click(screen.getByRole('button', { name: 'Guardar grupos' }))
     await waitFor(() => expect(onSaved).toHaveBeenCalled())
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toContain('/activities/a1/participation')

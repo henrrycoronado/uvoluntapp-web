@@ -2,6 +2,7 @@ import { type FormEvent, useState } from 'react'
 import { Button } from '../../../shared/ui'
 import { planningApi, type Activity, type ParticipationInput } from '../../planning/api'
 import { fromLocalInput, toLocalInput } from '../../planning/format'
+import detail from '../../planning/detail.module.css'
 import planning from '../../planning/planning.module.css'
 import styles from '../console.module.css'
 import { Feedback } from './Feedback'
@@ -104,78 +105,91 @@ export function ParticipationForm({ token, activity, onSaved }: { token: string;
   }
 
   return (
-    <form className={planning.form} onSubmit={submit} aria-label="Grupos y turnos" noValidate>
-      <fieldset className={planning.fieldset}>
-        <legend className={planning.legend}>Grupos y turnos</legend>
-        <p className={styles.muted}>Sin turnos, la inscripción es a la actividad. Con turnos, cada persona elige uno y el cupo es por turno.</p>
-        {draft.groups.map((g, i) => (
-          <div key={g.key} className={planning.grid2} role="group" aria-label={`Turno ${i + 1}`}>
-            <Field label={`Nombre del turno ${i + 1}`}>
-              {(id) => <input id={id} className={styles.select} value={g.name} maxLength={100} onChange={(e) => setGroup(g.key, { name: e.target.value })} />}
-            </Field>
-            <Field label={`Inicio del turno ${i + 1}`}>
-              {(id) => <input id={id} type="datetime-local" className={styles.select} value={g.startsAt} onChange={(e) => setGroup(g.key, { startsAt: e.target.value })} />}
-            </Field>
-            <Field label={`Fin del turno ${i + 1}`}>
-              {(id) => <input id={id} type="datetime-local" className={styles.select} value={g.endsAt} min={g.startsAt || undefined} onChange={(e) => setGroup(g.key, { endsAt: e.target.value })} />}
-            </Field>
-            <Field label={`Cupo del turno ${i + 1}`}>
-              {(id) => <input id={id} type="number" min={1} step={1} className={styles.select} value={g.capacity} placeholder="Vacío = sin límite" onChange={(e) => setGroup(g.key, { capacity: e.target.value })} />}
-            </Field>
-            <div>
-              <Button type="button" size="sm" variant="secondary" onClick={() => setDraft((d) => ({ ...d, groups: d.groups.filter((x) => x.key !== g.key) }))}>
-                Quitar turno {i + 1}
-              </Button>
-            </div>
+    <form onSubmit={submit} aria-label="Grupos y turnos" noValidate>
+      <div className={detail.layout}>
+        <div className={detail.stack}>
+          <div>
+            <h2 className={detail.cardTitle}>Grupos y turnos</h2>
+            <p className={detail.hint}>Solo inscripción previa y actividad en borrador. Multi-registro se habilita a nivel de actividad.</p>
           </div>
-        ))}
-        <div>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => setDraft((d) => ({ ...d, groups: [...d.groups, { key: `new-${counter++}`, name: '', startsAt: toLocalInput(activity.startsAt), endsAt: toLocalInput(activity.endsAt), capacity: '' }] }))}
-          >
-            Agregar turno
-          </Button>
-        </div>
-        <label className={planning.check}>
-          <input type="checkbox" checked={draft.allowMultipleGroups} onChange={(e) => setDraft((d) => ({ ...d, allowMultipleGroups: e.target.checked }))} />
-          Permitir inscribirse en más de un turno
-        </label>
-      </fieldset>
 
-      <fieldset className={planning.fieldset}>
-        <legend className={planning.legend}>Ubicación del evento y marcación</legend>
-        <div className={planning.grid2}>
-          <Field label="Latitud">
-            {(id) => <input id={id} inputMode="decimal" className={styles.select} value={draft.latitude} onChange={(e) => setDraft((d) => ({ ...d, latitude: e.target.value }))} />}
-          </Field>
-          <Field label="Longitud">
-            {(id) => <input id={id} inputMode="decimal" className={styles.select} value={draft.longitude} onChange={(e) => setDraft((d) => ({ ...d, longitude: e.target.value }))} />}
-          </Field>
-          <Field label="Radio (m)">
-            {(id) => <input id={id} inputMode="numeric" className={styles.select} value={draft.geofenceRadiusM} onChange={(e) => setDraft((d) => ({ ...d, geofenceRadiusM: e.target.value }))} />}
-          </Field>
-          <Field label="Tolerancia de marcación (min)">
-            {(id) => <input id={id} inputMode="numeric" className={styles.select} value={draft.checkinToleranceMin} onChange={(e) => setDraft((d) => ({ ...d, checkinToleranceMin: e.target.value }))} />}
-          </Field>
-        </div>
-        <label className={planning.check}>
-          <input type="checkbox" checked={draft.allowSelfCheckin} onChange={(e) => setDraft((d) => ({ ...d, allowSelfCheckin: e.target.checked }))} />
-          Permitir marcación simple informativa
-        </label>
-        <p className={styles.muted}>La web no registra asistencia: estos datos solo configuran la actividad.</p>
-      </fieldset>
+          {draft.groups.map((g, i) => (
+            <section key={g.key} className={detail.card} role="group" aria-label={`Grupo ${i + 1}`}>
+              <h3 className={detail.cardTitle}>{g.name.trim() || `Grupo ${i + 1}`}</h3>
+              <p className={detail.hint}>Grupo independiente de la estructura de programa; hereda modalidad de la actividad.</p>
+              <div className={detail.facts}>
+                <Field label={`Nombre del grupo ${i + 1}`}>
+                  {(id) => <input id={id} className={styles.select} value={g.name} maxLength={100} onChange={(e) => setGroup(g.key, { name: e.target.value })} />}
+                </Field>
+                <Field label={`Capacidad opcional del grupo ${i + 1}`}>
+                  {(id) => <input id={id} type="number" min={1} step={1} className={styles.select} value={g.capacity} placeholder="Vacío = sin límite" onChange={(e) => setGroup(g.key, { capacity: e.target.value })} />}
+                </Field>
+                <Field label={`Inicio del turno ${i + 1}`}>
+                  {(id) => <input id={id} type="datetime-local" className={styles.select} value={g.startsAt} onChange={(e) => setGroup(g.key, { startsAt: e.target.value })} />}
+                </Field>
+                <Field label={`Fin del turno ${i + 1}`}>
+                  {(id) => <input id={id} type="datetime-local" className={styles.select} value={g.endsAt} min={g.startsAt || undefined} onChange={(e) => setGroup(g.key, { endsAt: e.target.value })} />}
+                </Field>
+              </div>
+              <div>
+                <Button type="button" size="sm" variant="secondary" onClick={() => setDraft((d) => ({ ...d, groups: d.groups.filter((x) => x.key !== g.key) }))}>
+                  Quitar grupo {i + 1}
+                </Button>
+              </div>
+            </section>
+          ))}
 
-      {errors.length > 0 && (
-        <ul role="alert" className={planning.warnings}>
-          {errors.map((e) => <li key={e}>{e}</li>)}
-        </ul>
-      )}
-      <Feedback message={message} />
-      <div className={styles.actions}>
-        <Button type="submit" variant="primary">Guardar participación</Button>
+          <section className={detail.card} aria-label="Multi-registro y ubicación">
+            <label className={planning.check}>
+              <input type="checkbox" checked={draft.allowMultipleGroups} onChange={(e) => setDraft((d) => ({ ...d, allowMultipleGroups: e.target.checked }))} />
+              Permitir inscribirse en más de un grupo
+            </label>
+            <h3 className={detail.sectionTitle}>Ubicación del evento y marcación</h3>
+            <div className={detail.facts}>
+              <Field label="Latitud">
+                {(id) => <input id={id} inputMode="decimal" className={styles.select} value={draft.latitude} onChange={(e) => setDraft((d) => ({ ...d, latitude: e.target.value }))} />}
+              </Field>
+              <Field label="Longitud">
+                {(id) => <input id={id} inputMode="decimal" className={styles.select} value={draft.longitude} onChange={(e) => setDraft((d) => ({ ...d, longitude: e.target.value }))} />}
+              </Field>
+              <Field label="Radio (m)">
+                {(id) => <input id={id} inputMode="numeric" className={styles.select} value={draft.geofenceRadiusM} onChange={(e) => setDraft((d) => ({ ...d, geofenceRadiusM: e.target.value }))} />}
+              </Field>
+              <Field label="Tolerancia de marcación (min)">
+                {(id) => <input id={id} inputMode="numeric" className={styles.select} value={draft.checkinToleranceMin} onChange={(e) => setDraft((d) => ({ ...d, checkinToleranceMin: e.target.value }))} />}
+              </Field>
+            </div>
+            <label className={planning.check}>
+              <input type="checkbox" checked={draft.allowSelfCheckin} onChange={(e) => setDraft((d) => ({ ...d, allowSelfCheckin: e.target.checked }))} />
+              Permitir marcación simple informativa
+            </label>
+            <p className={detail.hint}>La web no registra asistencia: estos datos solo configuran la actividad.</p>
+          </section>
+
+          {errors.length > 0 && (
+            <ul role="alert" className={planning.warnings}>
+              {errors.map((e) => <li key={e}>{e}</li>)}
+            </ul>
+          )}
+          <Feedback message={message} />
+          <div className={styles.actions}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setDraft((d) => ({ ...d, groups: [...d.groups, { key: `new-${counter++}`, name: '', startsAt: toLocalInput(activity.startsAt), endsAt: toLocalInput(activity.endsAt), capacity: '' }] }))}
+            >
+              Agregar grupo
+            </Button>
+            <Button type="submit" variant="primary">Guardar grupos</Button>
+          </div>
+        </div>
+
+        <aside className={detail.card} aria-label="Reglas de configuración">
+          <h3 className={detail.cardTitle}>Reglas de configuración</h3>
+          <p className={detail.hint}>El grupo no requiere estado propio; sus horarios y cupos son opcionales.</p>
+          <p className={detail.hint}>Solo se crean en inscripción previa; no existen en SIMPLE.</p>
+          <p className={detail.hint}>El multirregistro pertenece a la actividad. Nunca permite grupos con horarios superpuestos entre sí ni con otras actividades inscritas.</p>
+        </aside>
       </div>
     </form>
   )

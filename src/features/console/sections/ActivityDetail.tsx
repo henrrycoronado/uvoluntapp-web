@@ -280,7 +280,7 @@ function ProgramDelegations({ token, activity, programId }: { token: string; act
         </ul>
       )}
       {candidates.length === 0 ? (
-        <p className={styles.muted}>Para delegar, primero suma líderes operativos al programa en “Agregación a programas”.</p>
+        <p className={styles.muted}>Para delegar, primero suma líderes operativos al programa en “Equipo del programa”.</p>
       ) : (
         <div className={styles.actions}>
           <Field label="Líder operativo del programa">

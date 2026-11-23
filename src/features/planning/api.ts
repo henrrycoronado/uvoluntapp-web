@@ -107,6 +107,9 @@ export interface Enrollment {
   status: EnrollmentStatus
   createdAt: string
   cancelledAt: string | null
+  /** Solo en la lista de una actividad, para quien la gestiona. */
+  participantName?: string | null
+  participantEmail?: string | null
 }
 
 /** Códigos de error de inscripción que el servidor devuelve en el Problem Details. */

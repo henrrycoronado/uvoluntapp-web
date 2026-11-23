@@ -6,21 +6,23 @@ import { activityPlace, formatSchedule } from '../../planning/format'
 import styles from '../home.module.css'
 
 interface OverviewProps {
+  token: string
   profile: ProfileView
   onOpen: (sectionId: string) => void
 }
 
 /** Panel de inicio: cifras propias, próximos pasos y la Pastoral. */
-export function OverviewSection({ profile, onOpen }: OverviewProps) {
+export function OverviewSection({ token, profile, onOpen }: OverviewProps) {
   const [programs] = useLoad(() => planningApi.catalog.programs())
   const [upcoming] = useLoad(() => planningApi.catalog.activities({ status: 'PUBLISHED' }))
+  const [mine] = useLoad(() => planningApi.enrollments.mine(token))
   const roles = activeRolesByRank(profile.roles)
+  const activeEnrollments = mine.status === 'ready' ? mine.data.filter((e) => e.status === 'ENROLLED').length : '—'
   const activePrograms = programs.status === 'ready' ? programs.data.meta.totalCount : null
 
   const stats = [
     { label: 'Programas activos', value: activePrograms ?? '—', section: 'programas' },
-    { label: 'Mis inscripciones', value: 0, section: 'registros' },
-    { label: 'Horas registradas', value: 0, section: 'registros' },
+    { label: 'Mis inscripciones', value: activeEnrollments, section: 'inscripciones' },
   ]
 
   return (

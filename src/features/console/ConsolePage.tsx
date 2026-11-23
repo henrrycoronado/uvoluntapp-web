@@ -2,6 +2,7 @@ import { navigate } from '../../app/navigation'
 import { AppShell } from '../../shared/layout/AppShell'
 import { useSection } from '../../shared/layout/useSection'
 import { useCurrentUser } from '../../shared/session/useCurrentUser'
+import { activeRolesByRank, roleLabels } from '../../shared/session/roles'
 import { AccessDenied } from '../../shared/ui'
 import { ProfileSection } from '../profile/ProfileSection'
 import { groupedSections, visibleSections } from './access'
@@ -39,13 +40,22 @@ export function ConsolePage() {
 
   const current = sections.find((s) => s.id === selected)
   const groups = groupedSections(can).map((group) => ({
-    label: group.feature === 'Resumen' ? undefined : group.feature,
+    label: group.feature,
     items: group.sections.map((s) => ({ id: s.id, label: s.title })),
   }))
   const token = session.accessToken
+  const topRole = activeRolesByRank(profile.roles)[0]
 
   return (
-    <AppShell area="Consola" groups={groups} active={selected} onSelect={select} switchAction={{ label: 'Volver a mi espacio', onClick: () => navigate('/inicio') }}>
+    <AppShell
+      area="Consola"
+      groups={groups}
+      active={selected}
+      onSelect={select}
+      breadcrumb={['Consola', selected === 'perfil' || !current ? 'Mi perfil' : current.title]}
+      account={{ name: `${profile.firstName} ${profile.lastName}`.trim(), role: topRole ? (topRole.role === 'ADMIN' ? 'ADMIN' : roleLabels[topRole.role].toUpperCase()) : undefined }}
+      switchAction={{ label: 'Espacio voluntario', onClick: () => navigate('/inicio') }}
+    >
       {selected === 'perfil' || !current ? (
         <>
           <h1 className={styles.heading}>Perfil</h1>
