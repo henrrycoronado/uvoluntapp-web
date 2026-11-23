@@ -9,6 +9,7 @@ import { ChangeEmailAction } from './ChangeEmailAction'
 import { ReasonAction } from './ReasonAction'
 import { useAction } from './useAction'
 import { useLoad } from './useLoad'
+import { LIMITS } from '../../auth/validation'
 
 const statusLabels: Record<string, string> = {
   ACTIVE: 'Activa',
@@ -38,7 +39,7 @@ export function UsersSection({ token, access }: { token: string; access: Access 
       >
         <Field label="Buscar por correo">
           {(id) => (
-            <input id={id} className={styles.select} value={search} onChange={(event) => setSearch(event.target.value)} />
+            <input id={id} className={styles.select} maxLength={LIMITS.email} value={search} onChange={(event) => setSearch(event.target.value)} />
           )}
         </Field>
         <Button type="submit" variant="secondary">Buscar</Button>

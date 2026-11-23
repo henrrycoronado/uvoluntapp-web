@@ -8,7 +8,7 @@ import styles from '../auth.module.css'
 import { commonMessage } from '../messages'
 import { clearSession } from '../session'
 import { useFieldErrors } from '../useFieldErrors'
-import { PASSWORD_MIN, confirmError, passwordError } from '../validation'
+import { LIMITS, PASSWORD_MIN, confirmError, passwordError } from '../validation'
 
 export function ResetPasswordPage() {
   const token = new URLSearchParams(window.location.search).get('token') ?? ''
@@ -70,8 +70,8 @@ export function ResetPasswordPage() {
     <AuthLayout variant="register" eyebrow="Recuperar acceso" title="Crea una contraseña nueva" description="Elige una contraseña que no uses en otros sitios.">
       {error && <p role="alert" className={styles.alert}>{error}</p>}
       <form className={styles.form} onSubmit={onSubmit} noValidate>
-        <TextField label="Contraseña nueva" type="password" autoComplete="new-password" hint={`Mínimo ${PASSWORD_MIN} caracteres.`} required {...bind('password')} />
-        <TextField label="Repite la contraseña" type="password" autoComplete="new-password" required {...bind('confirm')} />
+        <TextField label="Contraseña nueva" maxLength={LIMITS.password} type="password" autoComplete="new-password" hint={`Mínimo ${PASSWORD_MIN} caracteres.`} required {...bind('password')} />
+        <TextField label="Repite la contraseña" maxLength={LIMITS.password} type="password" autoComplete="new-password" required {...bind('confirm')} />
         <div className={styles.actions}>
           <Button type="submit" variant="primary" size="lg" disabled={submitting}>
             {submitting ? 'Guardando…' : 'Guardar contraseña'}

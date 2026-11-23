@@ -7,6 +7,7 @@ import { describe } from '../console/sections/useAction'
 import { profileApi, type ProfileView } from './api'
 import { EmailSettings } from './EmailSettings'
 import styles from './profile.module.css'
+import { LIMITS } from '../auth/validation'
 
 const statusLabels: Record<string, string> = {
   ACTIVE: 'Activa',
@@ -79,9 +80,9 @@ export function ProfileSection({ token, profile, onSaved }: ProfileSectionProps)
             </p>
           )}
           <form className={styles.form} onSubmit={save} aria-label="Editar mis datos">
-            <TextField label="Nombres" autoComplete="given-name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />
-            <TextField label="Apellidos" autoComplete="family-name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required />
-            <TextField label="Teléfono" type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            <TextField label="Nombres" maxLength={LIMITS.personName} autoComplete="given-name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />
+            <TextField label="Apellidos" maxLength={LIMITS.personName} autoComplete="family-name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required />
+            <TextField label="Teléfono" maxLength={LIMITS.phone} type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             <Button type="submit" variant="primary" disabled={saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</Button>
           </form>
         </section>

@@ -4,6 +4,7 @@ import { Button, TextField } from '../../shared/ui'
 import { logout } from '../auth/logout'
 import { commonMessage } from '../auth/messages'
 import { codeError, emailError, isInstitutional } from '../auth/validation'
+import { LIMITS } from '../auth/validation'
 import { profileApi, type ProfileView } from './api'
 import styles from './profile.module.css'
 
@@ -77,8 +78,8 @@ function AccessEmail({ token, profile }: { token: string; profile: ProfileView }
         <form className={styles.form} onSubmit={submit} noValidate aria-label="Cambiar correo de acceso">
           {step === 'request' ? (
             <>
-              <TextField label="Correo nuevo" type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-              <TextField label="Contraseña actual" type="password" autoComplete="current-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+              <TextField label="Correo nuevo" maxLength={LIMITS.email} type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+              <TextField label="Contraseña actual" maxLength={LIMITS.password} type="password" autoComplete="current-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
               <p className={styles.muted}>
                 Al confirmar el correo nuevo se cerrarán todas tus sesiones. Si no es un correo @ucb.edu.bo, tu cuenta quedará
                 sin verificar hasta que un administrador la revise.
@@ -152,7 +153,7 @@ function InstitutionalEmail({ token, profile, onSaved }: { token: string; profil
       {step !== 'idle' && (
         <form className={styles.form} onSubmit={submit} noValidate aria-label="Verificar correo institucional">
           {step === 'request' ? (
-            <TextField label="Correo @ucb.edu.bo" type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+            <TextField label="Correo @ucb.edu.bo" maxLength={LIMITS.email} type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
           ) : (
             <TextField label="Código" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.replace(/\D/g, '') })} required />
           )}

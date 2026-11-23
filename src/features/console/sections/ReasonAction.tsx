@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ConfirmButton } from '../../../shared/ui'
 import styles from '../console.module.css'
+import { LIMITS } from '../../auth/validation'
 
 interface ReasonActionProps {
   label: string
@@ -17,6 +18,7 @@ export function ReasonAction({ label, confirmLabel, onConfirm }: ReasonActionPro
         className={styles.select}
         aria-label={`Motivo para ${label.toLowerCase()}`}
         placeholder="Motivo"
+        maxLength={LIMITS.reason}
         value={reason}
         onChange={(event) => setReason(event.target.value)}
       />

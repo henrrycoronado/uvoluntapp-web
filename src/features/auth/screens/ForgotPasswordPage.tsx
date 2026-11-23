@@ -6,7 +6,7 @@ import { authApi } from '../api'
 import styles from '../auth.module.css'
 import { commonMessage } from '../messages'
 import { useFieldErrors } from '../useFieldErrors'
-import { emailError } from '../validation'
+import { LIMITS, emailError } from '../validation'
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -55,6 +55,7 @@ export function ForgotPasswordPage() {
           label="Correo electrónico"
           placeholder="nombre@ucb.edu.bo"
           name="email"
+          maxLength={LIMITS.email}
           type="email"
           inputMode="email"
           autoComplete="email"

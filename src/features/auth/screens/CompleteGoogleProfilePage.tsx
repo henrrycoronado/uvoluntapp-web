@@ -6,7 +6,7 @@ import styles from '../auth.module.css'
 import { readPendingEmail, readPendingGoogleToken, readPendingNames } from '../session'
 import { useFieldErrors } from '../useFieldErrors'
 import { useGoogleSignIn } from '../useGoogleSignIn'
-import { phoneError, requiredError } from '../validation'
+import { LIMITS, phoneError, requiredError } from '../validation'
 
 interface Values {
   firstName: string
@@ -65,11 +65,11 @@ export function CompleteGoogleProfilePage() {
       {google.error && <p role="alert" className={styles.alert}>{google.error}</p>}
       <form className={styles.form} onSubmit={onSubmit} noValidate>
         <div className={styles.row}>
-          <TextField label="Nombres (editable)" autoComplete="given-name" required {...bind('firstName')} />
-          <TextField label="Apellidos (editable)" autoComplete="family-name" required {...bind('lastName')} />
+          <TextField label="Nombres (editable)" maxLength={LIMITS.personName} autoComplete="given-name" required {...bind('firstName')} />
+          <TextField label="Apellidos (editable)" maxLength={LIMITS.personName} autoComplete="family-name" required {...bind('lastName')} />
         </div>
         {email && <TextField label="Correo verificado · no editable" value={email} readOnly disabled />}
-        <TextField label="Teléfono" placeholder="Ej. +591 7XXXXXXX" type="tel" inputMode="tel" autoComplete="tel" required {...bind('phone')} />
+        <TextField label="Teléfono" maxLength={LIMITS.phone} placeholder="Ej. +591 7XXXXXXX" type="tel" inputMode="tel" autoComplete="tel" required {...bind('phone')} />
         <p className={styles.info}>
           El número debe cumplir el formato internacional y ser único. Si utilizas un correo externo, la cuenta podrá requerir aprobación institucional. No se solicita contraseña ni OTP.
         </p>

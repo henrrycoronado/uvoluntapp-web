@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button, ConfirmButton } from '../../../shared/ui'
 import { emailError } from '../../auth/validation'
 import styles from '../console.module.css'
+import { LIMITS } from '../../auth/validation'
 
 interface ChangeEmailActionProps {
   currentEmail: string
@@ -27,6 +28,7 @@ export function ChangeEmailAction({ currentEmail, onConfirm }: ChangeEmailAction
         type="email"
         aria-label={`Correo nuevo para ${currentEmail}`}
         placeholder="Correo nuevo"
+        maxLength={LIMITS.email}
         value={email}
         onChange={(event) => setEmail(event.target.value)}
       />
@@ -34,6 +36,7 @@ export function ChangeEmailAction({ currentEmail, onConfirm }: ChangeEmailAction
         className={styles.select}
         aria-label="Motivo del cambio de correo"
         placeholder="Motivo"
+        maxLength={LIMITS.reason}
         value={reason}
         onChange={(event) => setReason(event.target.value)}
       />

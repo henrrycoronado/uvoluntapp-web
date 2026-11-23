@@ -11,7 +11,7 @@ import { giveReapplyHandoff } from '../reapplyHandoff'
 import { setPendingEmail, writeSession } from '../session'
 import { useFieldErrors } from '../useFieldErrors'
 import { useGoogleSignIn } from '../useGoogleSignIn'
-import { emailError, requiredError } from '../validation'
+import { LIMITS, emailError, requiredError } from '../validation'
 
 export function LoginPage() {
   const [email, setEmail] = useState('')
@@ -58,6 +58,7 @@ export function LoginPage() {
           label="Correo electrónico"
           placeholder="nombre@ucb.edu.bo"
           name="email"
+          maxLength={LIMITS.email}
           type="email"
           inputMode="email"
           autoComplete="username"
@@ -70,6 +71,7 @@ export function LoginPage() {
         <TextField
           label="Contraseña"
           name="password"
+          maxLength={LIMITS.password}
           type="password"
           autoComplete="current-password"
           value={password}

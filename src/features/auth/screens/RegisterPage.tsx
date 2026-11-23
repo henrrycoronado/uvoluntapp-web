@@ -10,7 +10,7 @@ import { commonMessage } from '../messages'
 import { setPendingEmail, setPendingNames } from '../session'
 import { useFieldErrors } from '../useFieldErrors'
 import { useGoogleSignIn } from '../useGoogleSignIn'
-import { PASSWORD_MIN, confirmError, emailError, passwordError, phoneError, requiredError } from '../validation'
+import { LIMITS, PASSWORD_MIN, confirmError, emailError, passwordError, phoneError, requiredError } from '../validation'
 
 const empty = { firstName: '', lastName: '', phone: '', email: '', password: '', confirm: '' }
 
@@ -80,13 +80,13 @@ export function RegisterPage() {
       {google.notice && <p role="status" className={styles.notice}>{google.notice}</p>}
       <form className={styles.form} onSubmit={onSubmit} noValidate>
         <div className={styles.row}>
-          <TextField label="Nombres" placeholder="Tus nombres" autoComplete="given-name" required {...bind('firstName')} />
-          <TextField label="Apellidos" placeholder="Tus apellidos" autoComplete="family-name" required {...bind('lastName')} />
+          <TextField label="Nombres" maxLength={LIMITS.personName} placeholder="Tus nombres" autoComplete="given-name" required {...bind('firstName')} />
+          <TextField label="Apellidos" maxLength={LIMITS.personName} placeholder="Tus apellidos" autoComplete="family-name" required {...bind('lastName')} />
         </div>
-        <TextField label="Correo electrónico" placeholder="nombre@ucb.edu.bo" type="email" autoComplete="email" inputMode="email" required {...bind('email')} />
-        <TextField label="Teléfono" placeholder="Ej. +591 7XXXXXXX" type="tel" inputMode="tel" autoComplete="tel" required {...bind('phone')} />
-        <TextField label="Contraseña" placeholder="Crea una contraseña segura" type="password" autoComplete="new-password" hint={passwordHint} required {...bind('password')} />
-        <TextField label="Confirmar contraseña" placeholder="Repite tu contraseña" type="password" autoComplete="new-password" required {...bind('confirm')} />
+        <TextField label="Correo electrónico" maxLength={LIMITS.email} placeholder="nombre@ucb.edu.bo" type="email" autoComplete="email" inputMode="email" required {...bind('email')} />
+        <TextField label="Teléfono" maxLength={LIMITS.phone} placeholder="Ej. +591 7XXXXXXX" type="tel" inputMode="tel" autoComplete="tel" required {...bind('phone')} />
+        <TextField label="Contraseña" maxLength={LIMITS.password} placeholder="Crea una contraseña segura" type="password" autoComplete="new-password" hint={passwordHint} required {...bind('password')} />
+        <TextField label="Confirmar contraseña" maxLength={LIMITS.password} placeholder="Repite tu contraseña" type="password" autoComplete="new-password" required {...bind('confirm')} />
         <p className={styles.info}>Te enviaremos un código para verificar tu correo. Si es externo a @ucb.edu.bo, necesitarás la aprobación de Pastoral.</p>
         <div className={styles.actions}>
           <Button type="submit" variant="primary" size="lg" disabled={submitting}>

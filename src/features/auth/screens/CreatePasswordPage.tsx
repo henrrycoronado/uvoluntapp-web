@@ -8,7 +8,7 @@ import styles from '../auth.module.css'
 import { commonMessage } from '../messages'
 import { readPendingEmail, writeSession } from '../session'
 import { useFieldErrors } from '../useFieldErrors'
-import { PASSWORD_MIN, codeError, confirmError, emailError, passwordError } from '../validation'
+import { LIMITS, PASSWORD_MIN, codeError, confirmError, emailError, passwordError } from '../validation'
 
 /** Cuenta creada con Google que quiere entrar con contraseña: prueba su correo una vez con un código. */
 export function CreatePasswordPage() {
@@ -61,10 +61,10 @@ export function CreatePasswordPage() {
     >
       {error && <p role="alert" className={styles.alert}>{error}</p>}
       <form className={styles.form} onSubmit={onSubmit} noValidate>
-        <TextField label="Correo" type="email" autoComplete="username" required {...bind('email')} />
+        <TextField label="Correo" maxLength={LIMITS.email} type="email" autoComplete="username" required {...bind('email')} />
         <TextField label="Código" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required {...bind('code')} />
-        <TextField label="Contraseña nueva" type="password" autoComplete="new-password" hint={`Mínimo ${PASSWORD_MIN} caracteres.`} required {...bind('password')} />
-        <TextField label="Repite la contraseña" type="password" autoComplete="new-password" required {...bind('confirm')} />
+        <TextField label="Contraseña nueva" maxLength={LIMITS.password} type="password" autoComplete="new-password" hint={`Mínimo ${PASSWORD_MIN} caracteres.`} required {...bind('password')} />
+        <TextField label="Repite la contraseña" maxLength={LIMITS.password} type="password" autoComplete="new-password" required {...bind('confirm')} />
         <div className={styles.actions}>
           <Button type="submit" variant="primary" size="lg" disabled={submitting}>
             {submitting ? 'Guardando…' : 'Crear contraseña'}

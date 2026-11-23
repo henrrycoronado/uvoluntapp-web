@@ -10,7 +10,7 @@ import { commonMessage, formatDate } from '../messages'
 import { takeReapplyHandoff } from '../reapplyHandoff'
 import { readPendingEmail } from '../session'
 import { useFieldErrors } from '../useFieldErrors'
-import { phoneError, requiredError } from '../validation'
+import { LIMITS, phoneError, requiredError } from '../validation'
 
 const handoff = () => takeReapplyHandoff() ?? { password: '', reason: '' }
 
@@ -77,7 +77,7 @@ export function ReapplyPage() {
       <form className={styles.form} onSubmit={onSubmit} noValidate>
         <ApprovalFields values={values} fields={fields} onChange={setValues} />
         {!given && (
-          <TextField label="Contraseña" name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <TextField label="Contraseña" maxLength={LIMITS.password} name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         )}
         <div className={styles.actions}>
           <Button type="submit" variant="primary" size="lg" disabled={submitting}>

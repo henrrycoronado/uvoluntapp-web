@@ -119,7 +119,7 @@ function ProgramsList({ token, can, items, includeArchived, onIncludeArchived, o
         </label>
         <label className={page.filterField}>
           Buscar
-          <input className={styles.select} value={text} placeholder="Nombre del programa" onChange={(e) => setText(e.target.value)} />
+          <input className={styles.select} maxLength={150} value={text} placeholder="Nombre del programa" onChange={(e) => setText(e.target.value)} />
         </label>
         <label className={page.filterField}>
           Ámbito

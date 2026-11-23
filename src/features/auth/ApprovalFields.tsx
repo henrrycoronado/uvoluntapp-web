@@ -1,6 +1,7 @@
 import { TextField } from '../../shared/ui'
 import styles from './auth.module.css'
 import type { useFieldErrors } from './useFieldErrors'
+import { LIMITS } from './validation'
 
 export interface ApprovalValues {
   firstName: string
@@ -30,10 +31,10 @@ export function ApprovalFields({ values, fields, onChange }: ApprovalFieldsProps
   return (
     <>
       <div className={styles.row}>
-        <TextField label="Nombres" autoComplete="given-name" required {...bind('firstName')} />
-        <TextField label="Apellidos" autoComplete="family-name" required {...bind('lastName')} />
+        <TextField label="Nombres" maxLength={LIMITS.personName} autoComplete="given-name" required {...bind('firstName')} />
+        <TextField label="Apellidos" maxLength={LIMITS.personName} autoComplete="family-name" required {...bind('lastName')} />
       </div>
-      <TextField label="Teléfono" type="tel" inputMode="tel" autoComplete="tel" required {...bind('phone')} />
+      <TextField label="Teléfono" maxLength={LIMITS.phone} type="tel" inputMode="tel" autoComplete="tel" required {...bind('phone')} />
       <TextField
         label="Relación con la Pastoral"
         hint="Por ejemplo: exalumna, familiar de un estudiante, voluntario de parroquia."

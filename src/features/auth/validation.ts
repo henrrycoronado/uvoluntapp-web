@@ -1,6 +1,9 @@
 /** Reglas de CONTEXT.md repetidas en el cliente; el servidor sigue siendo la autoridad. */
 export const PASSWORD_MIN = 8
 
+/** Longitudes máximas del contrato (openapi.yaml) para los datos de cuenta. */
+export const LIMITS = { email: 256, password: 128, personName: 100, phone: 30, relationship: 200, reason: 500 } as const
+
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function emailError(value: string): string | undefined {
